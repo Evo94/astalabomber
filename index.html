@@ -2,633 +2,2004 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>⚽ Asta Fantacalcio</title>
 <style>
-  :root{
-    --bg1:#07130f; --bg2:#0d2a1f; --card:rgba(255,255,255,.055); --line:rgba(255,255,255,.10);
-    --green:#22c55e; --green2:#16a34a; --gold:#fbbf24; --red:#ef4444; --txt:#f2f7f4; --mut:#9db8ab; --blue:#38bdf8;
+  :root {
+    --bg1: #05140d;
+    --bg2: #0b271b;
+    --card: rgba(255, 255, 255, 0.055);
+    --card-hover: rgba(255, 255, 255, 0.08);
+    --line: rgba(255, 255, 255, 0.12);
+    --line-active: rgba(34, 197, 94, 0.4);
+    --green: #22c55e;
+    --green-glow: rgba(34, 197, 94, 0.4);
+    --green-dark: #0f4625;
+    --gold: #fbbf24;
+    --gold-glow: rgba(251, 191, 36, 0.35);
+    --red: #ef4444;
+    --red-glow: rgba(239, 68, 68, 0.4);
+    --blue: #38bdf8;
+    --purple: #c084fc;
+    --txt: #f0fdf4;
+    --txt-mut: #94a3b8;
   }
-  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%}
-  body{
-    font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
-    background:radial-gradient(1200px 700px at 50% -10%,#14532d 0%,var(--bg2) 45%,var(--bg1) 100%) fixed;
-    color:var(--txt); min-height:100%; display:flex; flex-direction:column; overflow-x:hidden;
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
   }
-  .pitch{position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:0}
-  .wrap{position:relative;z-index:1;max-width:560px;width:100%;margin:0 auto;padding:14px 14px 40px;display:flex;flex-direction:column;flex:1}
 
-  /* ---------- header ---------- */
-  header{display:flex;align-items:center;gap:10px;padding:4px 2px 12px}
-  header .logo{font-size:26px}
-  header h1{font-size:20px;font-weight:800;letter-spacing:.5px}
-  header h1 span{color:var(--green)}
-  header .spacer{flex:1}
-  #me-chip{display:none;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
-  #me-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
-  #btn-admin{background:var(--card);border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s}
-  #btn-admin:hover{color:var(--txt);border-color:var(--green)}
-  #btn-admin.active{color:#052e16;background:var(--green);border-color:var(--green)}
-
-  /* ---------- pannello asta ---------- */
-  .auction-panel{
-    border-radius:22px;padding:18px 18px 22px;text-align:center;position:relative;overflow:hidden;
-    background:linear-gradient(180deg,rgba(34,197,94,.14),rgba(255,255,255,.03));border:1px solid rgba(34,197,94,.45);
-    box-shadow:0 18px 50px -18px rgba(0,0,0,.7), inset 0 0 60px rgba(34,197,94,.06);
+  html, body {
+    min-height: 100%;
+    background-color: var(--bg1);
+    color: var(--txt);
+    font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    touch-action: manipulation;
   }
-  .auction-panel::before{content:"";position:absolute;left:-40%;top:-140px;width:180%;height:200px;background:radial-gradient(closest-side,rgba(34,197,94,.22),transparent);pointer-events:none}
-  .panel-label{font-size:11px;letter-spacing:3px;font-weight:800;color:var(--mut);text-transform:uppercase}
-  .panel-label .live-badge{display:inline-block;background:var(--red);color:#fff;font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:999px;margin-left:6px;animation:blink 1.2s infinite}
-  @keyframes blink{50%{opacity:.45}}
-  #current-player{margin-top:8px;font-size:clamp(34px,9vw,54px);font-weight:900;line-height:1.1;text-shadow:0 4px 24px rgba(34,197,94,.35)}
-  #current-player .base{font-size:13px;font-weight:600;color:var(--mut);display:block;margin-top:2px}
-  #value-box{margin:14px auto 4px;font-size:clamp(64px,18vw,110px);font-weight:900;line-height:1;color:var(--gold);text-shadow:0 0 34px rgba(251,191,36,.35);font-variant-numeric:tabular-nums}
-  #value-box .cur{font-size:.45em;vertical-align:.55em;margin-right:2px;color:#fde68a}
-  #winner-line{margin-top:2px;font-size:16px;font-weight:700;min-height:24px}
-  #winner-line b{color:var(--green)}
-  #winner-line.locked b{color:var(--gold)}
-  #countdown-bar{height:5px;background:rgba(255,255,255,.08);border-radius:99px;margin-top:14px;overflow:hidden}
-  #countdown-fill{height:100%;width:100%;background:linear-gradient(90deg,var(--gold),var(--red));border-radius:99px}
-  .panel-note{font-size:11.5px;color:var(--mut);margin-top:8px}
 
-  /* ---------- bottone gigante ---------- */
-  #bid-btn{
-    margin:18px auto 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-    width:100%;max-width:460px;height:118px;border:none;border-radius:26px;cursor:pointer;
-    background:linear-gradient(180deg,#34d399,#059669);color:#03291a;
-    font-size:27px;font-weight:900;letter-spacing:.5px;
-    box-shadow:0 12px 0 #065f46, 0 24px 40px -12px rgba(0,0,0,.65), inset 0 2px 0 rgba(255,255,255,.4);
-    transition:transform .06s, box-shadow .06s, filter .2s; user-select:none;
+  body {
+    background: radial-gradient(1200px 800px at 50% -10%, #166534 0%, var(--bg2) 50%, var(--bg1) 100%) fixed;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
   }
-  #bid-btn small{font-size:12px;font-weight:800;opacity:.75;letter-spacing:.4px}
-  #bid-btn:active{transform:translateY(8px);box-shadow:0 4px 0 #065f46, 0 14px 24px -12px rgba(0,0,0,.6)}
-  #bid-btn:disabled{background:linear-gradient(180deg,#4b5563,#374151);color:#9ca3af;box-shadow:0 12px 0 #1f2937,0 24px 40px -12px rgba(0,0,0,.65);cursor:not-allowed;filter:none;transform:none}
-  #bid-btn.done{background:linear-gradient(180deg,#fbbf24,#d97706);color:#451a03;box-shadow:0 12px 0 #92400e,0 24px 40px -12px rgba(0,0,0,.65)}
-  #bid-preview{margin-top:10px;text-align:center;font-size:13px;color:var(--mut);min-height:18px;font-weight:600}
-  #bid-preview b{color:var(--txt)}
-  #bid-preview .base-note{color:var(--gold)}
 
-  /* ---------- sezioni ---------- */
-  .section{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;margin-top:14px}
-  .section h2{font-size:13px;letter-spacing:1.8px;text-transform:uppercase;color:var(--mut);font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:8px}
-  .section h2 .badge{background:var(--green);color:#052e16;font-size:11px;padding:1px 8px;border-radius:99px}
-  .count-label{font-size:12px;font-weight:700;color:var(--green);margin:12px 0 6px;text-transform:uppercase;letter-spacing:1px}
+  .pitch-bg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.45;
+    z-index: 0;
+  }
 
-  /* partecipanti */
-  #participants{display:flex;flex-wrap:wrap;gap:7px}
-  .pchip{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px}
-  .pchip.leader{border-color:var(--gold);background:rgba(251,191,36,.15);color:#fde68a}
-  .pchip.leader::after{content:"🏆";font-size:12px}
-  .pchip .spent{color:var(--mut);font-weight:600;font-size:11.5px}
-  .empty-note{color:var(--mut);font-size:13px;font-style:italic}
+  .app-container {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 12px 14px 50px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
 
-  /* lista asta */
-  #queue-list{display:flex;flex-direction:column;gap:5px}
-  .qrow{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:11px;padding:8px 11px;font-size:14px;font-weight:600}
-  .qrow.playing{background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.5)}
-  .qrow .idx{color:var(--mut);font-size:12px;min-width:22px}
-  .qrow .qname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .qrow .qbase{color:var(--mut);font-size:12px;font-weight:700;white-space:nowrap}
-  .qrow .mark{color:var(--green);font-weight:900}
-  .qrow.sold .qname{text-decoration:line-through;opacity:.55}
+  /* ========== HEADER ========== */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 0 14px;
+  }
 
-  /* storico */
-  #history{display:flex;flex-direction:column-reverse}
-  .hrow{display:flex;justify-content:space-between;gap:8px;padding:7px 4px;border-bottom:1px dashed rgba(255,255,255,.08);font-size:13.5px}
-  .hrow:last-child{border-bottom:none}
-  .hrow .hname{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .hrow .hprice{color:var(--gold);font-weight:800;white-space:nowrap}
-  .hrow .hwho{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:38%}
+  .logo-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-box .ball {
+    font-size: 26px;
+    filter: drop-shadow(0 0 10px rgba(34, 197, 94, 0.6));
+  }
+  .logo-box h1 {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.3px;
+    line-height: 1;
+  }
+  .logo-box h1 span {
+    color: var(--green);
+  }
 
-  /* ---------- Lobby ---------- */
-  #lobby{margin-top:6px}
-  .join-card{background:linear-gradient(180deg,rgba(34,197,94,.12),rgba(255,255,255,.03));border:1px solid rgba(34,197,94,.4);border-radius:22px;padding:26px 20px;text-align:center}
-  .join-card h2{font-size:22px;font-weight:900;margin-bottom:6px}
-  .join-card p{color:var(--mut);font-size:13.5px;margin-bottom:16px}
-  .join-card input{font-size:18px;text-align:center;padding:13px;border-radius:14px;width:100%;background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--txt);outline:none;transition:.15s}
-  .join-card input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,.2)}
-  .join-card button{margin-top:14px;width:100%;padding:15px;border:none;border-radius:14px;font-size:17px;font-weight:900;background:linear-gradient(180deg,#34d399,#059669);color:#03291a;cursor:pointer;transition:.15s}
-  .join-card button:hover{filter:brightness(1.1)}
-  .join-card button:disabled{opacity:.5;cursor:wait}
-  .waiting{display:none;text-align:center;padding:34px 16px}
-  .waiting .ball{font-size:54px;animation:spin 2.4s linear infinite;display:inline-block}
-  @keyframes spin{100%{transform:rotate(360deg)}}
-  .waiting h2{font-size:20px;margin-top:8px}
-  .waiting p{color:var(--mut);margin-top:8px;font-size:14px}
-  .waiting .hint{font-size:12.5px;color:var(--mut);margin-top:18px;opacity:.8}
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-  /* ---------- final ---------- */
-  #final{text-align:center;padding:20px 0 6px}
-  #final .trophy{font-size:56px;animation:pop .5s}
-  @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
-  #final h2{font-size:24px;font-weight:900;margin-top:6px}
-  #final p{color:var(--mut);margin-top:6px;font-size:14px}
-  .ranking{display:flex;flex-direction:column;gap:6px;margin-top:16px;text-align:left;max-width:420px;width:100%;margin-left:auto;margin-right:auto}
-  .rrow{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:13px;padding:10px 14px;font-weight:800;font-size:15px}
-  .rrow.podium{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.45)}
-  .rrow .medal{font-size:20px}
-  .rrow .rname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .rrow .rspent{color:var(--gold);font-variant-numeric:tabular-nums}
-  .rrow .rum{color:var(--mut);font-weight:600;font-size:12px;white-space:nowrap}
+  #user-badge {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid var(--green);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #86efac;
+  }
+  #user-badge .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+  }
 
-  /* ---------- admin ---------- */
-  #admin-panel{margin-top:14px}
-  .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .admin-box{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:14px;padding:12px}
-  .admin-box h3{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut);margin-bottom:9px}
-  .admin-box textarea{width:100%;min-height:110px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:10px;color:var(--txt);padding:10px;font-size:13.5px;font-family:inherit;resize:vertical;outline:none}
-  .admin-box textarea:focus{border-color:var(--blue)}
-  .field-row{margin-bottom:8px}
-  .field-row label{display:block;font-size:11.5px;color:var(--mut);font-weight:700;margin-bottom:3px}
-  .field-row input,.field-row select{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:9px;color:var(--txt);padding:8px 9px;font-size:14px;outline:none}
-  .field-row input:focus{border-color:var(--blue)}
-  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-  .abtn{flex:1;min-width:120px;padding:11px;border:none;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;transition:.15s;background:linear-gradient(180deg,#34d399,#059669);color:#03291a}
-  .abtn:hover{filter:brightness(1.08)}
-  .abtn.blue{background:linear-gradient(180deg,#38bdf8,#0284c7);color:#082f49}
-  .abtn.gold{background:linear-gradient(180deg,#fbbf24,#d97706);color:#451a03}
-  .abtn.red{background:linear-gradient(180deg,#f87171,#dc2626);color:#fff}
-  .abtn.ghost{background:rgba(255,255,255,.08);color:var(--txt);border:1px solid var(--line)}
-  .abtn:disabled{opacity:.45;cursor:not-allowed}
+  .btn-header {
+    background: var(--card);
+    border: 1px solid var(--line);
+    color: var(--txt-mut);
+    border-radius: 999px;
+    padding: 6px 13px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-header:hover {
+    color: var(--txt);
+    border-color: var(--green);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .btn-header.admin-active {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #ffffff;
+    border-color: #4ade80;
+    box-shadow: 0 0 14px rgba(34, 197, 94, 0.4);
+  }
 
-  /* ---------- modal nome ---------- */
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
-  .overlay.show{display:flex}
-  .modal{background:linear-gradient(180deg,#0e2b1f,#081711);border:1px solid rgba(34,197,94,.4);border-radius:20px;padding:24px 20px;width:100%;max-width:360px;text-align:center;box-shadow:0 30px 80px -20px #000}
-  .modal h3{font-size:19px;margin-bottom:4px}
-  .modal p{color:var(--mut);font-size:13px;margin-bottom:14px}
-  .modal input{width:100%;font-size:17px;text-align:center;padding:12px;border-radius:12px;background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--txt);outline:none;margin-bottom:11px}
-  .modal input:focus{border-color:var(--green)}
-  .modal button{width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;font-weight:900;background:linear-gradient(180deg,#34d399,#059669);color:#03291a;cursor:pointer}
+  /* ========== PANNELLO ASTA CENTRALE ========== */
+  .auction-card {
+    position: relative;
+    border-radius: 24px;
+    padding: 20px 18px 22px;
+    text-align: center;
+    background: linear-gradient(180deg, rgba(34, 197, 94, 0.16) 0%, rgba(15, 23, 42, 0.4) 100%);
+    border: 1.5px solid rgba(34, 197, 94, 0.45);
+    box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.8), inset 0 0 40px rgba(34, 197, 94, 0.06);
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+  }
+  .auction-card::before {
+    content: "";
+    position: absolute;
+    top: -120px;
+    left: -20%;
+    width: 140%;
+    height: 180px;
+    background: radial-gradient(closest-side, rgba(34, 197, 94, 0.25), transparent);
+    pointer-events: none;
+  }
 
-  /* ---------- toast ---------- */
-  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#0b1f16;border:1px solid rgba(251,191,36,.5);color:var(--txt);padding:11px 20px;border-radius:999px;font-size:14px;font-weight:700;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:88vw;text-align:center;box-shadow:0 10px 30px -8px #000}
-  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  #toast.err{border-color:rgba(239,68,68,.6)}
-  #toast.win{border-color:rgba(34,197,94,.7);background:#0e2e1d;color:#86efac}
+  .panel-header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--txt-mut);
+    background: rgba(0, 0, 0, 0.35);
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    margin-bottom: 8px;
+  }
+  .badge-live {
+    background: var(--red);
+    color: #fff;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 9.5px;
+    animation: blink 1.2s infinite;
+  }
+  .badge-paused {
+    background: var(--gold);
+    color: #451a03;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 9.5px;
+    font-weight: 900;
+  }
+  @keyframes blink { 50% { opacity: 0.4; } }
 
-  footer{margin-top:auto;text-align:center;color:var(--mut);font-size:11.5px;padding-top:22px;opacity:.7}
-  .hidden{display:none!important}
+  #player-title {
+    font-size: clamp(32px, 8.5vw, 48px);
+    font-weight: 900;
+    line-height: 1.15;
+    text-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+    word-break: break-word;
+    margin: 4px 0 2px;
+  }
+  #player-base-label {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--txt-mut);
+  }
+
+  .price-display {
+    margin: 12px auto 4px;
+    font-size: clamp(64px, 17vw, 100px);
+    font-weight: 900;
+    line-height: 1;
+    color: var(--gold);
+    text-shadow: 0 0 35px var(--gold-glow);
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+  .price-display .currency {
+    font-size: 0.45em;
+    vertical-align: 0.45em;
+    color: #fde68a;
+    font-weight: 800;
+  }
+
+  #bidder-status {
+    min-height: 26px;
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+  #bidder-status b {
+    color: var(--green);
+  }
+  #bidder-status.locked b {
+    color: var(--gold);
+  }
+
+  /* Timer & Progress Bar */
+  .timer-section {
+    margin-top: 14px;
+  }
+  .timer-top-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 5px;
+    padding: 0 4px;
+  }
+  .timer-top-info .timer-label {
+    color: var(--txt-mut);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .timer-top-info .timer-digits {
+    font-size: 16px;
+    color: var(--txt);
+    font-variant-numeric: tabular-nums;
+  }
+  .timer-digits.urgent {
+    color: var(--red);
+    animation: pulseRed 0.6s infinite alternate;
+  }
+  @keyframes pulseRed {
+    from { transform: scale(1); }
+    to { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.8)); }
+  }
+
+  .countdown-bar {
+    height: 8px;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .countdown-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--green), var(--gold));
+    border-radius: 999px;
+    transition: width 0.1s linear, background-color 0.2s;
+  }
+
+  .anti-snipe-banner {
+    display: none;
+    margin-top: 8px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #fde68a;
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px dashed rgba(251, 191, 36, 0.4);
+    border-radius: 999px;
+    padding: 4px 10px;
+  }
+  .anti-snipe-banner.active {
+    display: inline-block;
+    animation: pulseYellow 1s infinite alternate;
+  }
+  @keyframes pulseYellow {
+    from { opacity: 0.85; }
+    to { opacity: 1; border-color: rgba(251, 191, 36, 0.9); }
+  }
+
+  /* ========== BOTTONE GIGANTE RILANCIO ========== */
+  #bid-button {
+    margin: 16px auto 0;
+    width: 100%;
+    max-width: 480px;
+    height: 116px;
+    border: none;
+    border-radius: 24px;
+    cursor: pointer;
+    background: linear-gradient(180deg, #34d399 0%, #059669 100%);
+    color: #022c1b;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    box-shadow: 0 12px 0 #065f46, 0 20px 35px -10px rgba(0, 0, 0, 0.7), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    transition: transform 0.06s, box-shadow 0.06s, filter 0.15s;
+    user-select: none;
+  }
+  #bid-button small {
+    font-size: 12.5px;
+    font-weight: 800;
+    opacity: 0.85;
+    letter-spacing: 0.3px;
+  }
+  #bid-button:active:not(:disabled) {
+    transform: translateY(8px);
+    box-shadow: 0 4px 0 #065f46, 0 10px 20px -8px rgba(0, 0, 0, 0.6);
+  }
+  #bid-button:disabled {
+    background: linear-gradient(180deg, #475569 0%, #334155 100%);
+    color: #94a3b8;
+    box-shadow: 0 10px 0 #1e293b, 0 15px 25px -10px rgba(0, 0, 0, 0.5);
+    cursor: not-allowed;
+    filter: none;
+    transform: none;
+  }
+  #bid-button.leading {
+    background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+    color: #451a03;
+    box-shadow: 0 12px 0 #92400e, 0 20px 35px -10px rgba(0, 0, 0, 0.6);
+  }
+
+  .bid-sub-info {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--txt-mut);
+    min-height: 20px;
+  }
+  .bid-sub-info b {
+    color: var(--txt);
+  }
+
+  /* ========== SEZIONI & CARDS ========== */
+  .section-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 16px;
+    margin-top: 14px;
+    backdrop-filter: blur(6px);
+  }
+  .section-title {
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--txt-mut);
+    font-weight: 800;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section-title .pill {
+    background: var(--green);
+    color: #052e16;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+
+  /* ========== LOBBY / PARTECIPAZIONE ========== */
+  .join-box {
+    background: linear-gradient(180deg, rgba(34, 197, 94, 0.12), rgba(0, 0, 0, 0.2));
+    border: 1.5px solid rgba(34, 197, 94, 0.4);
+    border-radius: 22px;
+    padding: 24px 18px;
+    text-align: center;
+  }
+  .join-box h2 {
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 6px;
+  }
+  .join-box p {
+    color: var(--txt-mut);
+    font-size: 13.5px;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+  .join-box input {
+    width: 100%;
+    max-width: 380px;
+    padding: 14px;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1.5px solid var(--line);
+    color: var(--txt);
+    outline: none;
+    transition: 0.15s;
+    margin-bottom: 12px;
+  }
+  .join-box input:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
+  }
+  .join-box button {
+    width: 100%;
+    max-width: 380px;
+    padding: 14px;
+    font-size: 17px;
+    font-weight: 900;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #34d399, #059669);
+    color: #022c1b;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4);
+    transition: 0.15s;
+  }
+  .join-box button:hover {
+    filter: brightness(1.1);
+  }
+
+  .waiting-box {
+    display: none;
+    text-align: center;
+    padding: 24px 16px;
+  }
+  .waiting-box .ball-anim {
+    font-size: 48px;
+    display: inline-block;
+    animation: spin 3s linear infinite;
+  }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+
+  /* ========== LISTA PARTECIPANTI & ROSE ========== */
+  .participants-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .p-chip {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .p-chip:hover {
+    background: rgba(34, 197, 94, 0.22);
+    border-color: var(--green);
+  }
+  .p-chip.leader {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: var(--gold);
+    color: #fef08a;
+  }
+  .p-chip .spent-pill {
+    font-size: 11.5px;
+    color: var(--txt-mut);
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 2px 6px;
+    border-radius: 999px;
+  }
+
+  /* ========== LISTA ASTA (QUEUE) ========== */
+  .queue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+  .queue-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .queue-item.current-item {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.5);
+  }
+  .queue-item .q-idx {
+    color: var(--txt-mut);
+    font-size: 12px;
+    min-width: 22px;
+  }
+  .queue-item .q-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .queue-item .q-base {
+    color: var(--txt-mut);
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+
+  /* ========== STORICO AGGIUDICATI ========== */
+  .history-list {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+  .h-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 13.5px;
+  }
+  .h-row .h-player {
+    font-weight: 800;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .h-row .h-winner {
+    color: var(--txt-mut);
+    font-size: 12.5px;
+    margin: 0 10px;
+  }
+  .h-row .h-price {
+    font-weight: 900;
+    color: var(--gold);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ========== FINALE & PODIO ========== */
+  .final-section {
+    text-align: center;
+    padding: 24px 0 10px;
+  }
+  .final-trophy {
+    font-size: 60px;
+    animation: pop 0.5s ease;
+  }
+  @keyframes pop { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .ranking-table {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+    text-align: left;
+  }
+  .rank-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 16px;
+    font-weight: 800;
+  }
+  .rank-row.podium {
+    background: rgba(251, 191, 36, 0.12);
+    border-color: rgba(251, 191, 36, 0.4);
+  }
+
+  /* ========== PANNELLO AMMINISTRATORE (ASTATORE) ========== */
+  #admin-panel {
+    background: #071911;
+    border: 1.5px solid rgba(34, 197, 94, 0.5);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+  }
+  .admin-login-box {
+    text-align: center;
+    padding: 16px 8px;
+  }
+  .admin-login-box input {
+    width: 100%;
+    max-width: 280px;
+    padding: 12px;
+    font-size: 16px;
+    text-align: center;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1.5px solid var(--line);
+    color: var(--txt);
+    outline: none;
+    margin-bottom: 12px;
+  }
+  .admin-login-box input:focus {
+    border-color: var(--green);
+  }
+
+  .admin-subcard {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .admin-subcard h3 {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--txt-mut);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  @media (max-width: 540px) {
+    .grid-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .form-group {
+    margin-bottom: 10px;
+  }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--txt-mut);
+    margin-bottom: 4px;
+  }
+  .form-group small {
+    display: block;
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 3px;
+    line-height: 1.3;
+  }
+  .form-group input, .form-group select {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--txt);
+    padding: 10px;
+    font-size: 14px;
+    outline: none;
+    transition: 0.15s;
+  }
+  .form-group input:focus, .form-group select:focus {
+    border-color: var(--green);
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .admin-btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .btn-adm {
+    flex: 1;
+    min-width: 110px;
+    padding: 11px 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 13.5px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+  }
+  .btn-adm:hover {
+    filter: brightness(1.1);
+  }
+  .btn-adm.green {
+    background: linear-gradient(180deg, #34d399, #059669);
+    color: #022c1b;
+  }
+  .btn-adm.gold {
+    background: linear-gradient(180deg, #fbbf24, #d97706);
+    color: #451a03;
+  }
+  .btn-adm.blue {
+    background: linear-gradient(180deg, #38bdf8, #0284c7);
+    color: #082f49;
+  }
+  .btn-adm.red {
+    background: linear-gradient(180deg, #f87171, #dc2626);
+    color: #ffffff;
+  }
+  .btn-adm.ghost {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--txt);
+    border: 1px solid var(--line);
+  }
+  .btn-adm.ghost:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .btn-adm:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: none;
+  }
+
+  .timer-control-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+  }
+  .btn-timer-chip {
+    flex: 1;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--txt);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  .btn-timer-chip:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: var(--green);
+  }
+
+  /* Admin queue interactive table */
+  .adm-queue-table {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 10px;
+  }
+  .adm-q-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .adm-q-actions {
+    display: flex;
+    gap: 4px;
+  }
+  .btn-sm-icon {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--line);
+    color: var(--txt);
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .btn-sm-icon:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* ========== MODALS ========== */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+  }
+  .overlay.show {
+    display: flex;
+  }
+  .modal-card {
+    background: linear-gradient(180deg, #0e2b1f, #071610);
+    border: 1.5px solid rgba(34, 197, 94, 0.4);
+    border-radius: 24px;
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    box-shadow: 0 30px 80px -20px #000;
+  }
+  .modal-card h3 {
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+  .modal-card p {
+    color: var(--txt-mut);
+    font-size: 13.5px;
+    margin-bottom: 16px;
+  }
+
+  /* Roster modal */
+  .roster-list {
+    text-align: left;
+    max-height: 260px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 14px 0;
+  }
+  .roster-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+  .roster-item .r-price {
+    color: var(--gold);
+  }
+
+  /* ========== TOAST ========== */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(30px);
+    background: #091c13;
+    border: 1.5px solid rgba(251, 191, 36, 0.6);
+    color: var(--txt);
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 800;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s ease;
+    z-index: 200;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #toast.err {
+    border-color: rgba(239, 68, 68, 0.8);
+    background: #240c0c;
+    color: #fca5a5;
+  }
+  #toast.win {
+    border-color: rgba(34, 197, 94, 0.8);
+    background: #0c2b19;
+    color: #86efac;
+  }
+
+  footer {
+    margin-top: auto;
+    text-align: center;
+    color: var(--txt-mut);
+    font-size: 11.5px;
+    padding-top: 24px;
+    opacity: 0.7;
+  }
+  .hidden {
+    display: none !important;
+  }
 </style>
 </head>
 <body>
-<svg class="pitch" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-  <rect x="2" y="2" width="96" height="96" fill="none" stroke="#22c55e" stroke-opacity=".07" stroke-width="1.5"/>
-  <line x1="50" y1="2" x2="50" y2="98" stroke="#22c55e" stroke-opacity=".07" stroke-width="1"/>
-  <circle cx="50" cy="50" r="14" fill="none" stroke="#22c55e" stroke-opacity=".07" stroke-width="1"/>
-  <rect x="2" y="34" width="14" height="32" fill="none" stroke="#22c55e" stroke-opacity=".07" stroke-width="1"/>
-  <rect x="84" y="34" width="14" height="32" fill="none" stroke="#22c55e" stroke-opacity=".07" stroke-width="1"/>
-  <circle cx="50" cy="50" r="1.4" fill="#22c55e" fill-opacity=".1"/>
+
+<!-- Sfondo campo da calcio SVG -->
+<svg class="pitch-bg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+  <rect x="2" y="2" width="96" height="96" fill="none" stroke="#22c55e" stroke-opacity="0.1" stroke-width="1.5"/>
+  <line x1="50" y1="2" x2="50" y2="98" stroke="#22c55e" stroke-opacity="0.1" stroke-width="1"/>
+  <circle cx="50" cy="50" r="14" fill="none" stroke="#22c55e" stroke-opacity="0.1" stroke-width="1"/>
+  <rect x="2" y="34" width="14" height="32" fill="none" stroke="#22c55e" stroke-opacity="0.1" stroke-width="1"/>
+  <rect x="84" y="34" width="14" height="32" fill="none" stroke="#22c55e" stroke-opacity="0.1" stroke-width="1"/>
+  <circle cx="50" cy="50" r="1.5" fill="#22c55e" fill-opacity="0.15"/>
 </svg>
 
-<div class="wrap">
+<div class="app-container">
+  <!-- HEADER -->
   <header>
-    <div class="logo">⚽</div>
-    <h1>Asta <span>Fantacalcio</span></h1>
-    <div class="spacer"></div>
-    <div id="me-chip"><div class="dot"></div><span id="me-name"></span></div>
-    <button id="btn-admin" type="button">🔧 Astatore</button>
+    <div class="logo-box">
+      <span class="ball">⚽</span>
+      <h1>Asta <span>Fantacalcio</span></h1>
+    </div>
+    <div class="header-actions">
+      <div id="user-badge"><div class="dot"></div><span id="user-name-display"></span></div>
+      <button id="btn-sound-toggle" class="btn-header" type="button" title="Attiva/Disattiva Suoni">🔊</button>
+      <button id="btn-admin-toggle" class="btn-header" type="button">🔧 Astatore</button>
+    </div>
   </header>
 
-  <!-- ======== PANNELLO ASTA ======== -->
-  <section id="auction-panel" class="auction-panel">
-    <div class="panel-label"><span id="phase-label">ASTA IN CORSO</span><span id="live-badge" class="live-badge">LIVE</span></div>
-    <div id="current-player">— <span class="base"></span></div>
-    <div id="value-box"><span class="cur">€</span><span id="value">0</span></div>
-    <div id="winner-line">In attesa della prima offerta…</div>
-    <div id="countdown-bar"><div id="countdown-fill"></div></div>
-    <div class="panel-note">L'asta scatta automaticamente quando il timer arriva a zero ⏱</div>
+  <!-- ==================== PANNELLO ASTA LIVE ==================== -->
+  <section id="auction-card" class="auction-card">
+    <div class="panel-header-badge">
+      <span id="auction-phase-text">IN ATTESA DELL'ASTA</span>
+      <span id="badge-live-tag" class="badge-live hidden">LIVE</span>
+      <span id="badge-paused-tag" class="badge-paused hidden">PAUSA ⏸️</span>
+    </div>
+
+    <!-- Nome e Base del Giocatore -->
+    <div id="player-title">—</div>
+    <div id="player-base-label">Base d'asta: <span id="player-base-val">€ 0</span></div>
+
+    <!-- Prezzo Attuale In Asta -->
+    <div class="price-display">
+      <span class="currency">€</span>
+      <span id="current-price">0</span>
+    </div>
+
+    <!-- Stato Miglior Offerente -->
+    <div id="bidder-status">In attesa della prima offerta…</div>
+
+    <!-- Timer & Countdown Bar -->
+    <div class="timer-section">
+      <div class="timer-top-info">
+        <span class="timer-label">⏱️ Countdown:</span>
+        <span id="timer-digits" class="timer-digits">--</span>
+      </div>
+      <div class="countdown-bar">
+        <div id="countdown-fill" class="countdown-fill" style="width: 100%;"></div>
+      </div>
+      <div id="anti-snipe-banner" class="anti-snipe-banner">
+        ⚡ Rilancio sotto i <span id="threshold-val">10</span>s allunga il timer!
+      </div>
+    </div>
   </section>
 
-  <!-- ======== BOTTONE GIGANTE ======== -->
-  <button id="bid-btn" type="button" disabled>
-    <span id="btn-main">PUNTA!</span>
-    <small id="btn-sub"></small>
+  <!-- ==================== PULSANTE GIGANTE RILANCIO ==================== -->
+  <button id="bid-button" type="button" disabled>
+    <span id="bid-main-text">PUNTA!</span>
+    <small id="bid-sub-text">inserisci prima il tuo nome</small>
   </button>
-  <div id="bid-preview"></div>
+  <div id="bid-preview" class="bid-sub-info"></div>
 
-  <!-- ======== LOBBY ======== -->
-  <section id="lobby">
-    <div id="join-card" class="join-card">
-      <h2>Benvenuto all'asta! 👋</h2>
-      <p>Inserisci il tuo nome per partecipare.<br>Poi premi il grande pulsante verde per puntare.</p>
-      <input id="join-name" type="text" maxlength="24" placeholder="Il tuo nome…" autocomplete="off">
-      <button id="join-btn" type="button">ENTRA IN ASTA →</button>
+  <!-- ==================== LOBBY (ACCESSO PARTECIPANTE) ==================== -->
+  <section id="lobby-section">
+    <div id="join-box" class="join-box">
+      <h2>👋 Benvenuto all'Asta!</h2>
+      <p>Inserisci il tuo nome per entrare nella stanza.<br>Potrai rilanciare con un tocco dal tuo telefono!</p>
+      <input id="input-join-name" type="text" maxlength="24" placeholder="Il tuo nome (es. Marco)…" autocomplete="off">
+      <button id="btn-join-submit" type="button">ENTRA IN SALA D'ASTA 🚀</button>
     </div>
-    <div id="waiting" class="waiting">
-      <span class="ball">⚽</span>
-      <h2>Ciao <b id="wait-name"></b>! Sei in sala d'asta 👊</h2>
-      <p id="wait-status">In attesa che l'astatore inizi l'asta…</p>
-      <div class="hint">I partecipanti connessi si vedono qui sotto ⬇</div>
+
+    <div id="waiting-box" class="waiting-box">
+      <span class="ball-anim">⚽</span>
+      <h2 style="margin-top:10px; font-size: 20px;">Sei pronto, <b id="wait-user-name" style="color:var(--green)"></b>! 🔥</h2>
+      <p style="color:var(--txt-mut); margin-top:6px; font-size:14px;">Quando l'astatore apre un giocatore, premi il tasto verde per puntare.</p>
     </div>
   </section>
 
-  <!-- ======== FINALE ======== -->
-  <section id="final" class="section hidden">
-    <div class="trophy">🏆</div>
-    <h2>Astacalcio conclusa!</h2>
-    <p>Ecco come è andata la spesa:</p>
-    <div id="ranking" class="ranking"></div>
+  <!-- ==================== FINALE / PODIO ==================== -->
+  <section id="final-section" class="section-card hidden">
+    <div class="final-section">
+      <div class="final-trophy">🏆</div>
+      <h2 style="font-size:24px; font-weight:900; margin-top:6px;">Asta Conclusa!</h2>
+      <p style="color:var(--txt-mut); font-size:14px; margin-top:4px;">Riepilogo finale dei crediti spesi e giocatori acquistati:</p>
+      <div id="ranking-list" class="ranking-table"></div>
+    </div>
   </section>
 
-  <!-- ======== PARTECIPANTI ======== -->
-  <section id="participants-section" class="section">
-    <h2>👥 In sala d'asta <span id="pcount" class="badge">0</span></h2>
-    <div id="participants"><span class="empty-note">Ancora nessuno…</span></div>
+  <!-- ==================== PARTECIPANTI & ROSE ==================== -->
+  <section id="participants-section" class="section-card">
+    <div class="section-title">
+      <span>👥 Partecipanti in Sala (<span id="count-participants">0</span>)</span>
+      <span class="pill">Tocca per vedere la rosa</span>
+    </div>
+    <div id="participants-container" class="participants-list">
+      <span style="color:var(--txt-mut); font-style:italic; font-size:13px;">In attesa dei partecipanti…</span>
+    </div>
   </section>
 
-  <!-- ======== LISTA ASTA ======== -->
-  <section id="queue-section" class="section">
-    <h2>📋 Lista dell'asta <span id="qcount" class="badge">0</span></h2>
-    <div id="queue-list"><span class="empty-note">La lista dei giocatori comparirà qui.</span></div>
+  <!-- ==================== LISTA ASTA (CODA) ==================== -->
+  <section id="queue-section" class="section-card">
+    <div class="section-title">
+      <span>📋 Prossimi Giocatori (<span id="count-queue">0</span>)</span>
+    </div>
+    <div id="queue-container" class="queue-list">
+      <span style="color:var(--txt-mut); font-style:italic; font-size:13px;">Nessun giocatore in lista.</span>
+    </div>
   </section>
 
-  <!-- ======== STORICO ======== -->
-  <section id="history-section" class="section">
-    <h2>📜 Aggiudicati</h2>
-    <div id="history"><span class="empty-note">Nessun giocatore ancora assegnato.</span></div>
+  <!-- ==================== STORICO AGGIUDICATI ==================== -->
+  <section id="history-section" class="section-card">
+    <div class="section-title">
+      <span>📜 Giocatori Aggiudicati (<span id="count-history">0</span>)</span>
+    </div>
+    <div id="history-container" class="history-list">
+      <span style="color:var(--txt-mut); font-style:italic; font-size:13px;">Nessun giocatore ancora assegnato.</span>
+    </div>
   </section>
 
-  <footer>⚽ Asta Fantacalcio — si rinnova in tempo reale su tutti i dispositivi</footer>
+  <!-- ==================== PANNELLO GESTIONE ASTATORE ==================== -->
+  <div id="admin-panel" class="section-card hidden">
+    <div class="section-title">
+      <span style="color:var(--green)">🛠️ Pannello di Controllo Astatore</span>
+      <span id="admin-status-badge" class="pill">ADMIN</span>
+    </div>
+
+    <!-- Login Astatore -->
+    <div id="admin-login-view" class="admin-login-box">
+      <p style="color:var(--txt-mut); font-size:14px; margin-bottom:12px;">Inserisci la passcode per gestire l'asta (predefinita: <b>admin</b>):</p>
+      <input id="admin-passcode-input" type="password" placeholder="Passcode Astatore">
+      <button id="btn-admin-login" class="btn-adm green" style="width:100%; max-width:280px; margin:0 auto;">ACCEDI AL PANNELLO 🔑</button>
+    </div>
+
+    <!-- Azioni Astatore Autenticato -->
+    <div id="admin-dashboard-view" class="hidden">
+
+      <!-- 1. MODIFICA DIRETTA DEL GIOCATORE IN ASTA -->
+      <div class="admin-subcard" style="border-color: rgba(34, 197, 94, 0.4);">
+        <h3>🎯 Giocatore Attualmente in Asta</h3>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Nome Giocatore</label>
+            <input id="adm-edit-name" type="text" placeholder="Nome giocatore…">
+          </div>
+          <div class="form-group">
+            <label>Base d'asta (€)</label>
+            <input id="adm-edit-base" type="number" min="0" step="1">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Valore Attuale Offerto (€)</label>
+            <input id="adm-edit-val" type="number" min="0" step="1">
+          </div>
+          <div class="form-group">
+            <label>Migliore Offerente</label>
+            <input id="adm-edit-winner" type="text" placeholder="(Nessuno se vuoto)">
+          </div>
+        </div>
+        <div class="admin-btn-row">
+          <button id="btn-adm-save-player" class="btn-adm green">✏️ Salva Modifiche Giocatore</button>
+        </div>
+
+        <!-- Azioni Rapide Chiusura -->
+        <div class="admin-btn-row" style="margin-top:12px;">
+          <button id="btn-adm-award" class="btn-adm gold">🏅 Aggiudica a <b id="adm-win-name" style="margin-left:4px">—</b></button>
+          <button id="btn-adm-unsold" class="btn-adm ghost">🙅 Svenduto (Nessuno)</button>
+        </div>
+        <div class="admin-btn-row">
+          <button id="btn-adm-close-now" class="btn-adm red">⏹ Chiudi Subito</button>
+          <button id="btn-adm-next-queue" class="btn-adm blue">▶ Prossimo dalla Lista</button>
+        </div>
+
+        <!-- Controlli Timer Real-Time -->
+        <div class="timer-control-bar">
+          <button id="btn-timer-pause" class="btn-timer-chip">⏸️ Pausa / Riprendi</button>
+          <button id="btn-timer-restart" class="btn-timer-chip">🔄 Riavvia Timer</button>
+          <button id="btn-timer-add5" class="btn-timer-chip">➕ +5s</button>
+          <button id="btn-timer-add10" class="btn-timer-chip">➕ +10s</button>
+          <button id="btn-timer-sub5" class="btn-timer-chip">➖ -5s</button>
+        </div>
+      </div>
+
+      <!-- 2. LANCIA GIOCATORE RAPIDO (SENZA CODA) -->
+      <div class="admin-subcard">
+        <h3>⚡ Lancia Giocatore Istantaneo (senza lista)</h3>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Nome Giocatore</label>
+            <input id="adm-quick-name" type="text" placeholder="Es. Osimhen, Chiesa, Dybala…">
+          </div>
+          <div class="form-group">
+            <label>Base d'asta (€)</label>
+            <input id="adm-quick-base" type="number" min="0" value="1">
+          </div>
+        </div>
+        <div class="admin-btn-row">
+          <button id="btn-adm-quick-start" class="btn-adm green">🚀 Avvia Asta Subito</button>
+          <button id="btn-adm-quick-add-queue" class="btn-adm ghost">➕ Aggiungi in fondo alla Lista</button>
+        </div>
+      </div>
+
+      <!-- 3. IMPOSTAZIONI TEMPI & REGOLE ASTA -->
+      <div class="admin-subcard">
+        <h3>⚙️ Regole Asta, Timer & Anti-Sniping</h3>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Durata Timer Asta (secondi)</label>
+            <input id="adm-cfg-timer" type="number" min="0" max="300" step="1">
+            <small>Durata del countdown per ogni giocatore (0 = timer disattivato).</small>
+          </div>
+          <div class="form-group">
+            <label>Soglia Estensione Rilanci (secondi)</label>
+            <input id="adm-cfg-threshold" type="number" min="1" max="120" step="1">
+            <small>I rilanci allungano il tempo <b>SOLO</b> se mancano meno di questi secondi (es. 10s).</small>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Tempo Esteso per Rilancio (secondi)</label>
+            <input id="adm-cfg-extsec" type="number" min="1" max="120" step="1">
+            <small>Valore a cui viene riportato (o aggiunto) il timer al rilancio (es. 10s).</small>
+          </div>
+          <div class="form-group">
+            <label>Modalità di Estensione</label>
+            <select id="adm-cfg-extmode">
+              <option value="set">Riporta ad almeno X secondi (Consigliato)</option>
+              <option value="add">Aggiungi +X secondi al tempo residuo</option>
+            </select>
+            <small>Se 'Riporta': a 4s torna a 10s. A 25s non cambia.</small>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Passo di Rilancio (€)</label>
+            <input id="adm-cfg-inc" type="number" min="1" max="500" step="1">
+          </div>
+          <div class="form-group">
+            <label>Base d'asta Predefinita (€)</label>
+            <input id="adm-cfg-base" type="number" min="0" max="5000" step="1">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Avvia Timer Subito all'apertura</label>
+            <select id="adm-cfg-startopen">
+              <option value="1">Sì (parte subito countdown)</option>
+              <option value="0">No (il timer parte solo alla 1ª offerta)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Passaggio Automatico al Prossimo</label>
+            <select id="adm-cfg-autonext">
+              <option value="1">Sì (apre subito il prossimo dopo 3s)</option>
+              <option value="0">No (manuale tramite tasto ▶ Prossimo)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Cambia Passcode Admin (opzionale)</label>
+          <input id="adm-cfg-passcode" type="text" placeholder="Lascia vuoto per non cambiare">
+          <small>Imposta una password sicura per il pannello astatore.</small>
+        </div>
+
+        <div class="admin-btn-row">
+          <button id="btn-adm-save-settings" class="btn-adm green" style="width:100%;">💾 Salva Tutte le Impostazioni</button>
+        </div>
+      </div>
+
+      <!-- 4. GESTIONE LISTA GIOCATORI MASSIVA -->
+      <div class="admin-subcard">
+        <h3>📝 Carica Lista Giocatori (un nome per riga)</h3>
+        <p style="color:var(--txt-mut); font-size:12px; margin-bottom:8px;">
+          Sintassi supportata: <code>Vlahovic, 15</code> oppure <code>Lautaro 25</code> oppure semplicemente <code>Calhanoglu</code>.
+        </p>
+        <textarea id="adm-queue-textarea" style="width:100%; min-height:100px; background:rgba(0,0,0,0.4); border:1px solid var(--line); border-radius:10px; color:var(--txt); padding:10px; font-size:13.5px; font-family:inherit; outline:none;" placeholder="Vlahovic, 15&#10;Lautaro, 20&#10;Calhanoglu, 10&#10;Bastoni, 8"></textarea>
+        <div class="admin-btn-row">
+          <button id="btn-adm-load-queue" class="btn-adm blue">📥 Sostituisci Intera Lista</button>
+        </div>
+
+        <h4 style="font-size:12px; color:var(--txt-mut); margin-top:14px; text-transform:uppercase;">Gestione Coda Giocatori Attuale:</h4>
+        <div id="adm-interactive-queue" class="adm-queue-table"></div>
+      </div>
+
+      <!-- 5. AZIONI FINALI & RESET -->
+      <div class="admin-subcard">
+        <h3>🚨 Azioni Globali & Sessione</h3>
+        <div class="admin-btn-row">
+          <button id="btn-adm-finish-auction" class="btn-adm gold">🏁 Concludi Asta</button>
+          <button id="btn-adm-reset-all" class="btn-adm red">🗑️ Reset Totale Asta</button>
+        </div>
+        <div class="admin-btn-row" style="margin-top:10px;">
+          <button id="btn-adm-logout" class="btn-adm ghost" style="width:100%;">🔒 Logout Astatore</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    ⚽ Asta Fantacalcio Realtime — Sincronizzazione istantanea SSE
+  </footer>
 </div>
 
-<!-- ======== PANNELLO ASTATORE ======== -->
-<div id="admin-panel" class="section hidden">
-  <h2>🛠️ Pannello astatore</h2>
-  <div id="admin-login">
-    <p style="color:var(--mut);font-size:13.5px;margin-bottom:10px">Inserisci il passcode per gestire l'asta (default: <b>admin</b>).</p>
-    <div class="field-row"><input id="admin-pass" type="password" placeholder="Passcode"></div>
-    <button id="admin-login-btn" class="abtn" style="width:100%">ACCEDI</button>
-  </div>
-  <div id="admin-actions" class="hidden">
-    <div class="admin-grid">
-      <div class="admin-box">
-        <h3>🎯 In corso <span id="adm-current" style="color:var(--gold);font-weight:800;font-size:12px"></span></h3>
-        <div class="btnrow" style="margin-top:0">
-          <button id="adm-award" class="abtn gold">🏅 Aggiudica a<br><b id="adm-award-name" style="font-size:13px">—</b></button>
-          <button id="adm-nobody" class="abtn ghost">🙅 Svenduto</button>
-        </div>
-        <div class="btnrow">
-          <button id="adm-close" class="abtn red">⏹ Chiudi subito</button>
-          <button id="adm-next" class="abtn blue">▶ Prossimo</button>
-        </div>
-      </div>
-      <div class="admin-box">
-        <h3>⚙️ Impostazioni</h3>
-        <div class="field-row"><label>Rilancio (€)</label><input id="adm-inc" type="number" min="1" step="1"></div>
-        <div class="field-row"><label>Autoscatto (secondi, 0=manuale)</label><input id="adm-auto" type="number" min="0" max="60" step="1"></div>
-        <div class="field-row"><label>Base di default (€)</label><input id="adm-base" type="number" min="0" step="1"></div>
-        <div class="field-row"><label>Prossimo automatico</label><select id="adm-autonext"><option value="1">Sì</option><option value="0">No</option></select></div>
-        <button id="adm-save" class="abtn" style="width:100%">💾 Salva impostazioni</button>
-      </div>
-    </div>
-    <div class="admin-box" style="margin-top:10px">
-      <h3>📝 Lista giocatori — un nome per riga, base opzionale con virgola (es. <i>Vlahovic, 15</i>)</h3>
-      <textarea id="adm-queue" placeholder="es.&#10;Vlahovic, 15&#10;Lautaro&#10;Calhanoglu, 8&#10;…"></textarea>
-      <div class="btnrow">
-        <button id="adm-load" class="abtn blue">📥 Carica lista</button>
-        <button id="adm-reset" class="abtn red">🗑 Reset totale</button>
-      </div>
-    </div>
-    <div class="btnrow" style="justify-content:center">
-      <button id="adm-hide" class="abtn ghost" style="max-width:220px">🔒 Chiudi pannello</button>
-    </div>
-  </div>
-</div>
-
-<!-- ======== MODAL NOME (per partecipare) ======== -->
-<div id="name-modal" class="overlay">
-  <div class="modal">
+<!-- ==================== MODAL INSERIMENTO NOME ==================== -->
+<div id="modal-name-overlay" class="overlay">
+  <div class="modal-card">
     <h3>👋 Come ti chiami?</h3>
-    <p>Serve un nome per partecipare all'asta</p>
-    <input id="modal-name" type="text" maxlength="24" placeholder="Il tuo nome…" autocomplete="off">
-    <button id="modal-go" type="button">ENTRA IN ASTA →</button>
+    <p>Inserisci il tuo nome per poter fare offerte in tempo reale.</p>
+    <input id="modal-name-input" type="text" maxlength="24" placeholder="Il tuo nome…" autocomplete="off" style="width:100%; padding:13px; font-size:17px; text-align:center; border-radius:12px; background:rgba(0,0,0,0.4); border:1px solid var(--line); color:var(--txt); outline:none; margin-bottom:14px;">
+    <button id="btn-modal-name-submit" class="btn-adm green" style="width:100%;">ENTRA IN ASTA →</button>
+  </div>
+</div>
+
+<!-- ==================== MODAL VISUALIZZA ROSA PARTECIPANTE ==================== -->
+<div id="modal-roster-overlay" class="overlay">
+  <div class="modal-card">
+    <h3 id="roster-modal-title">Rosa di Marco</h3>
+    <p id="roster-modal-subtitle">Totale speso: € 0 · 0 giocatori</p>
+    <div id="roster-modal-list" class="roster-list"></div>
+    <button id="btn-close-roster-modal" class="btn-adm ghost" style="width:100%; margin-top:8px;">Chiudi</button>
   </div>
 </div>
 
 <div id="toast"></div>
 
+<!-- ==================== LOGICA CLIENT JAVASCRIPT ==================== -->
 <script>
 'use strict';
-/* ================== stato client ================== */
+
 const $ = id => document.getElementById(id);
 const LS = {
-  get token(){ try{return localStorage.getItem('asta_token')||''}catch(e){return ''} },
-  set token(v){ try{ v?localStorage.setItem('asta_token',v):localStorage.removeItem('asta_token') }catch(e){} },
-  get admin(){ try{return localStorage.getItem('asta_admin')||''}catch(e){return ''} },
-  set admin(v){ try{ v?localStorage.setItem('asta_admin',v):localStorage.removeItem('asta_admin') }catch(e){} },
+  get token() { try { return localStorage.getItem('asta_user_token') || ''; } catch (e) { return ''; } },
+  set token(v) { try { v ? localStorage.setItem('asta_user_token', v) : localStorage.removeItem('asta_user_token'); } catch (e) {} },
+  get admin() { try { return localStorage.getItem('asta_admin_token') || ''; } catch (e) { return ''; } },
+  set admin(v) { try { v ? localStorage.setItem('asta_admin_token', v) : localStorage.removeItem('asta_admin_token'); } catch (e) {} },
+  get sound() { try { return localStorage.getItem('asta_sound') !== '0'; } catch (e) { return true; } },
+  set sound(v) { try { localStorage.setItem('asta_sound', v ? '1' : '0'); } catch (e) {} }
 };
 
-let S = null;          // ultimo stato dal server
-let me = null;         // {name, token} del partecipante loggato
-let lastSeenWinner = null;
-let bidCooldown = 0;   // anti-doppio click client
+let S = null;              // Stato globale dal server
+let me = null;             // { name, token } partecipante loggato
+let clientTimeOffset = 0;  // Offset sincronizzazione orologio server-client
 let toastTimer = null;
+let audioCtx = null;
+let soundEnabled = LS.sound;
 
-/* ================== util ================== */
-function toast(msg, type){
-  const t = $('toast');
-  t.textContent = msg;
-  t.className = 'show ' + (type||'');
+/* ==================== AUDIO SINTETIZZATO (WEB AUDIO API) ==================== */
+function initAudio() {
+  if (!audioCtx && typeof window.AudioContext !== 'undefined') {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+function playBeep(freq = 600, duration = 0.08, type = 'sine') {
+  if (!soundEnabled) return;
+  try {
+    initAudio();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch (e) {}
+}
+
+/* ==================== UTILITA ==================== */
+function toast(msg, type = '') {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>t.className='', 2600);
-}
-function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function fmt(v){ return Number(v||0).toLocaleString('it-IT'); }
-
-async function api(url, body){
-  try{
-    const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{})});
-    return await r.json();
-  }catch(e){ return {ok:false, error:'Connessione persa, riprova'}; }
+  toastTimer = setTimeout(() => { el.className = ''; }, 2800);
 }
 
-/* ================== SES (sse) ================== */
-function connect(){
+function esc(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function fmt(n) {
+  return Number(n || 0).toLocaleString('it-IT');
+}
+
+async function api(url, body = {}) {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    return await res.json();
+  } catch (e) {
+    return { ok: false, error: 'Connessione al server persa' };
+  }
+}
+
+function admApi(action, payload = {}) {
+  return api('/api/admin', {
+    adminToken: LS.admin,
+    action,
+    payload
+  });
+}
+
+/* ==================== REALTIME SSE CONNECTION ==================== */
+function connectSSE() {
   const es = new EventSource('/events');
-  es.onmessage = ev => { try{ apply(JSON.parse(ev.data)); }catch(e){} };
-  es.onerror = () => { /* EventSource si riconnette da solo */ };
+  es.onmessage = ev => {
+    try {
+      const data = JSON.parse(ev.data);
+      if (data && data.serverNow) {
+        clientTimeOffset = data.serverNow - Date.now();
+      }
+      applyState(data);
+    } catch (e) {
+      console.error('Errore parsing SSE:', e);
+    }
+  };
+  es.onerror = () => {
+    // Riconnessione automatica gestita nativamente dal browser
+  };
 }
-async function hello(){
+
+async function restoreUserSession() {
   const token = LS.token;
-  if(!token) return;
-  await api('/api/join', {name:'', token});   // ripristina sessione se il token è ancora valido
-}
-function apply(st){
-  const prevCurrent = S && S.current ? S.current.name : null;
-  S = st;
-  renderAll(prevCurrent);
+  if (!token) return;
+  const res = await api('/api/join', { name: '', token });
+  if (res.ok) {
+    me = { name: res.name, token: res.token };
+  } else {
+    LS.token = '';
+  }
 }
 
-/* ================== render ================== */
-function renderAll(prevCurrent){
-  const value = S.value, winner = S.winner;
+function applyState(newState) {
+  const prevPrice = S ? S.value : 0;
+  const prevWinner = S ? S.winner : null;
+  S = newState;
+
+  if (prevPrice !== S.value && S.value > 0) {
+    playBeep(880, 0.12, 'triangle');
+  }
+
+  renderAll();
+}
+
+/* ==================== RENDERING INTERFACCIA ==================== */
+function renderAll() {
+  if (!S) return;
+
+  const current = S.current;
   const phase = S.phase;
+  const setting = S.setting || {};
 
-  /* --- pannello punteggio --- */
-  $('value').textContent = fmt(value);
-  $('current-player').innerHTML = S.current
-    ? esc(S.current.name) + '<span class="base">base €' + fmt(S.current.base) + '</span>'
-    : '<span style="opacity:.4">—</span>';
+  /* --- Pannello Asta Live --- */
+  $('player-title').textContent = current ? current.name : '—';
+  $('player-base-val').textContent = current ? '€ ' + fmt(current.base) : '€ 0';
+  $('current-price').textContent = fmt(S.value);
 
-  const label = $('phase-label');
-  if(phase==='finished'){ label.textContent='ASTA CONCLUSSA'; $('live-badge').style.display='none'; }
-  else if(!S.current){ label.textContent='PROSSIMAMENTE'; $('live-badge').style.display='none'; }
-  else { label.textContent = value<=S.current.base ? 'APERTURA — PRIMA OFFERTA' : 'ASTA IN CORSO'; $('live-badge').style.display='inline-block'; }
+  const phaseText = $('auction-phase-text');
+  const liveBadge = $('badge-live-tag');
+  const pausedBadge = $('badge-paused-tag');
 
-  const wl = $('winner-line');
-  if(S.current && winner){ wl.innerHTML = '👑 Migliore offerta: <b>'+esc(winner)+'</b>'; wl.classList.add('locked'); }
-  else if(S.current){ wl.innerHTML = 'In attesa della prima offerta…'; wl.classList.remove('locked'); }
-  else if(phase==='finished'){ wl.textContent='Alla prossima stagione!'; wl.classList.remove('locked'); }
-  else { wl.textContent='L\'astatore sta preparando la lista…'; wl.classList.remove('locked'); }
-
-  /* --- bottone gigante --- */
-  const btn = $('bid-btn'), main = $('btn-main'), sub = $('btn-sub');
-  const eligible = me && phase==='auction' && S.current && winner!==me.name;
-  if(!me){
-    btn.disabled = true; main.textContent='PUNTA!'; sub.textContent='inserisci prima il tuo nome';
-  } else if(phase!=='auction' || !S.current){
-    btn.disabled = true; main.textContent='PUNTA!'; sub.textContent = (phase==='finished')?'l\'asta è finita':'in attesa della prossima asta';
-  } else if(winner===me.name){
-    btn.disabled = true; btn.classList.add('done'); main.textContent='SEI IN TESTA! 🏆'; sub.textContent='base €'+fmt(S.current.base)+' · rilancio '+fmt(S.increment);
+  if (phase === 'finished') {
+    phaseText.textContent = 'ASTA CONCLUSA 🏆';
+    liveBadge.classList.add('hidden');
+    pausedBadge.classList.add('hidden');
+  } else if (!current) {
+    phaseText.textContent = 'IN ATTESA DELLA PROSSIMA ASTA';
+    liveBadge.classList.add('hidden');
+    pausedBadge.classList.add('hidden');
+  } else if (S.isPaused) {
+    phaseText.textContent = 'ASTA IN PAUSA';
+    liveBadge.classList.add('hidden');
+    pausedBadge.classList.remove('hidden');
   } else {
-    btn.disabled = false; btn.classList.remove('done');
-    const next = value + S.increment;
-    main.textContent = 'PUNTA €' + fmt(next);
-    sub.textContent = 'base €'+fmt(S.current.base)+' · rilancio +€'+fmt(S.increment);
+    phaseText.textContent = S.winner ? 'ASTA IN CORSO' : 'PRIMA OFFERTA';
+    liveBadge.classList.remove('hidden');
+    pausedBadge.classList.add('hidden');
   }
 
-  /* --- anteprima sotto il bottone --- */
-  const pv = $('bid-preview');
-  if(S.current && me && winner!==me.name){
-    pv.innerHTML = 'Con la tua offerta sali a <b>€'+fmt(value + S.increment)+'</b>';
-  } else if(S.current && winner===me.name){
-    pv.innerHTML = '<span class="base-note">Attendi il timer… qualcuno potrebbe superarti!</span>';
-  } else { pv.innerHTML=''; }
+  const bidderStatus = $('bidder-status');
+  if (current && S.winner) {
+    bidderStatus.innerHTML = '👑 Miglior offerente: <b>' + esc(S.winner) + '</b>';
+    bidderStatus.classList.add('locked');
+  } else if (current) {
+    bidderStatus.innerHTML = 'In attesa della prima offerta…';
+    bidderStatus.classList.remove('locked');
+  } else if (phase === 'finished') {
+    bidderStatus.innerHTML = 'Grazie a tutti i partecipanti!';
+    bidderStatus.classList.remove('locked');
+  } else {
+    bidderStatus.innerHTML = 'L\'astatore sta preparando il prossimo giocatore…';
+    bidderStatus.classList.remove('locked');
+  }
 
-  /* --- lobby / attesa --- */
+  /* --- Aggiornamento Soglia Anti-Sniping nel Banner --- */
+  const threshold = setting.extendThreshold || 10;
+  $('threshold-val').textContent = threshold;
+
+  /* --- Pulsante Gigante Rilancio --- */
+  const btn = $('bid-button');
+  const mainTxt = $('bid-main-text');
+  const subTxt = $('bid-sub-text');
+  const preview = $('bid-preview');
+  const inc = setting.increment || 1;
+
+  if (!me) {
+    btn.disabled = true;
+    btn.classList.remove('leading');
+    mainTxt.textContent = 'PUNTA!';
+    subTxt.textContent = 'inserisci prima il tuo nome';
+    preview.innerHTML = '';
+  } else if (phase !== 'auction' || !current) {
+    btn.disabled = true;
+    btn.classList.remove('leading');
+    mainTxt.textContent = 'PUNTA!';
+    subTxt.textContent = phase === 'finished' ? 'l\'asta è conclusa' : 'in attesa del prossimo giocatore';
+    preview.innerHTML = '';
+  } else if (S.isPaused) {
+    btn.disabled = true;
+    btn.classList.remove('leading');
+    mainTxt.textContent = 'IN PAUSA ⏸️';
+    subTxt.textContent = 'l\'astatore ha sospeso il timer';
+    preview.innerHTML = '';
+  } else if (S.winner === me.name) {
+    btn.disabled = true;
+    btn.classList.add('leading');
+    mainTxt.textContent = 'SEI IN TESTA! 🏆';
+    subTxt.textContent = 'Offerta attuale: € ' + fmt(S.value);
+    preview.innerHTML = '<span style="color:var(--gold);">Attendi lo scadere del timer… difendi la tua offerta!</span>';
+  } else {
+    btn.disabled = false;
+    btn.classList.remove('leading');
+    const nextVal = S.winner ? S.value + inc : current.base;
+    mainTxt.textContent = 'PUNTA € ' + fmt(nextVal);
+    subTxt.textContent = 'base €' + fmt(current.base) + ' · rilancio +€' + fmt(inc);
+    preview.innerHTML = 'La tua offerta salirà a <b>€ ' + fmt(nextVal) + '</b>';
+  }
+
+  /* --- Visualizzazione Badge Utente & Lobby --- */
   const joined = !!me;
-  $('join-card').style.display = joined ? 'none' : '';
-  $('waiting').style.display = joined ? '' : 'none';
-  $('me-chip').style.display = joined ? 'flex' : 'none';
-  if(joined){ $('me-name').textContent = me.name; $('wait-name').textContent = me.name; }
-
-  /* --- final --- */
-  $('final').classList.toggle('hidden', phase!=='finished');
-  $('bid-btn').style.display = phase==='finished' ? 'none':'';
-  $('bid-preview').style.display = phase==='finished' ? 'none':'';
-  if(phase==='finished'){
-    const sorted = [...S.participants].sort((a,b)=>b.spent-a.spent);
-    $('ranking').innerHTML = sorted.length ? sorted.map((p,i)=>(
-      '<div class="rrow'+(i<3?' podium':'')+'">'+
-      '<span class="medal">'+(['🥇','🥈','🥉'][i]||'🎽')+'</span>'+
-      '<span class="rname">'+esc(p.name)+'</span>'+
-      '<span class="rum">'+fmt(p.roster?Object.keys(p.roster).length:0)+' gioc.</span>'+
-      '<span class="rspent">€'+fmt(p.spent)+'</span></div>'
-    )).join('') : '<span class="empty-note">Nessun partecipante…</span>';
+  $('join-box').style.display = joined ? 'none' : '';
+  $('waiting-box').style.display = joined ? '' : 'none';
+  $('user-badge').style.display = joined ? 'inline-flex' : 'none';
+  if (joined) {
+    $('user-name-display').textContent = me.name;
+    $('wait-user-name').textContent = me.name;
   }
 
-  /* --- partecipanti --- */
-  const parts = [...S.participants];
-  $('pcount').textContent = parts.length;
-  $('participants').innerHTML = parts.length ? parts.map(p=>(
-    '<span class="pchip'+(S.winner===p.name?' leader':'')+'">'+esc(p.name)+
-    (p.roster && Object.keys(p.roster).length ? ' <span class="spent">€'+fmt(p.spent)+' · '+Object.keys(p.roster).length+'</span>':'') +
-    '</span>'
-  )).join('') : '<span class="empty-note">Ancora nessuno…</span>';
+  /* --- Finale / Classifica --- */
+  $('final-section').classList.toggle('hidden', phase !== 'finished');
+  if (phase === 'finished') {
+    const sorted = [...(S.participants || [])].sort((a, b) => b.spent - a.spent);
+    $('ranking-list').innerHTML = sorted.length ? sorted.map((p, i) => `
+      <div class="rank-row ${i < 3 ? 'podium' : ''}">
+        <span style="font-size:22px">${['🥇', '🥈', '🥉'][i] || '🎖️'}</span>
+        <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(p.name)}</span>
+        <span style="color:var(--txt-mut); font-size:12.5px;">${fmt(Object.keys(p.roster || {}).length)} giocatori</span>
+        <span style="color:var(--gold); font-variant-numeric:tabular-nums;">€ ${fmt(p.spent)}</span>
+      </div>
+    `).join('') : '<div style="color:var(--txt-mut); text-align:center;">Nessun acquisto registrato.</div>';
+  }
 
-  /* --- lista asta --- */
+  /* --- Partecipanti & Rose --- */
+  const parts = S.participants || [];
+  $('count-participants').textContent = parts.length;
+  $('participants-container').innerHTML = parts.length ? parts.map(p => {
+    const isLeader = S.winner === p.name;
+    const count = Object.keys(p.roster || {}).length;
+    return `
+      <div class="p-chip ${isLeader ? 'leader' : ''}" onclick="showRosterModal('${esc(p.name)}')">
+        <span>${esc(p.name)}</span>
+        <span class="spent-pill">€ ${fmt(p.spent)} · ${count}</span>
+      </div>
+    `;
+  }).join('') : '<span style="color:var(--txt-mut); font-style:italic; font-size:13px;">Nessun partecipante connesso…</span>';
+
+  /* --- Lista Asta (Coda) --- */
   const q = S.queue || [];
-  $('qcount').textContent = q.length + (S.current?1:0);
-  let rows = [];
-  if(S.current){
-    rows.push('<div class="qrow playing"><span class="idx">▶</span><span class="qname">'+esc(S.current.name)+'</span><span class="qbase">base €'+fmt(S.current.base)+'</span><span class="mark">IN ASTA</span></div>');
+  $('count-queue').textContent = q.length + (current ? 1 : 0);
+  let qHtml = [];
+  if (current) {
+    qHtml.push(`
+      <div class="queue-item current-item">
+        <span class="q-idx" style="color:var(--green); font-weight:900;">▶</span>
+        <span class="q-name" style="font-weight:800; color:var(--txt);">${esc(current.name)}</span>
+        <span class="q-base">base € ${fmt(current.base)}</span>
+        <span style="font-size:10.5px; background:var(--green); color:#052e16; font-weight:900; padding:2px 6px; border-radius:999px;">IN CORSO</span>
+      </div>
+    `);
   }
-  const soldSet = {};
-  (S.history||[]).forEach(h=>soldSet[h.player]=h);
-  q.forEach((p,i)=>rows.push(
-    '<div class="qrow'+(soldSet[p.name]?' sold':'')+'"><span class="idx">'+(i+1)+'</span>'+
-    '<span class="qname">'+esc(p.name)+'</span><span class="qbase">base €'+fmt(p.base)+'</span>'+
-    (soldSet[p.name]?'<span class="mark">✓</span>':'')+'</div>'
-  ));
-  $('queue-list').innerHTML = rows.length ? rows.join('') : '<span class="empty-note">La lista dei giocatori comparirà qui.</span>';
+  q.forEach((item, i) => {
+    qHtml.push(`
+      <div class="queue-item">
+        <span class="q-idx">${i + 1}</span>
+        <span class="q-name">${esc(item.name)}</span>
+        <span class="q-base">base € ${fmt(item.base)}</span>
+      </div>
+    `);
+  });
+  $('queue-container').innerHTML = qHtml.length ? qHtml.join('') : '<span style="color:var(--txt-mut); font-style:italic; font-size:13px;">Nessun giocatore in lista.</span>';
 
-  /* --- storico --- */
-  const h = [...(S.history||[])].reverse();
-  $('history').innerHTML = h.length ? h.map(x=>(
-    '<div class="hrow"><span class="hname">'+esc(x.player)+'</span>'+
-    '<span class="hwho">'+(x.winner?esc(x.winner):'svenduto')+'</span>'+
-    '<span class="hprice">€'+fmt(x.value)+'</span></div>'
-  )).join('') : '<span class="empty-note">Nessun giocatore ancora assegnato.</span>';
+  /* --- Storico Aggiudicati --- */
+  const history = [...(S.history || [])].reverse();
+  $('count-history').textContent = history.length;
+  $('history-container').innerHTML = history.length ? history.map(h => `
+    <div class="h-row">
+      <span class="h-player">${esc(h.player)}</span>
+      <span class="h-winner">${h.winner ? 'Assegnato a <b>' + esc(h.winner) + '</b>' : '<i style="color:var(--red)">Svenduto</i>'}</span>
+      <span class="h-price">€ ${fmt(h.value)}</span>
+    </div>
+  `).join('') : '<span style="color:var(--txt-mut); font-style:italic; font-size:13px;">Nessun giocatore ancora assegnato.</span>';
 
-  /* --- admin --- */
-  renderAdmin();
+  /* --- Pannello Admin --- */
+  renderAdminView();
 }
 
-/* ================== countdown ================== */
-setInterval(()=>{
-  const fill = $('countdown-fill');
-  if(!S || !S.current || !S.autoClose || !S.lastBidAt){ fill.style.width='100%'; fill.style.background='linear-gradient(90deg,var(--gold),var(--red))'; return; }
-  const total = S.autoClose*1000;
-  const left = Math.max(0, S.lastBidAt + total - Date.now());
-  fill.style.width = (left/total*100)+'%';
-  fill.style.background = left<1500 ? 'var(--red)' : 'linear-gradient(90deg,var(--gold),var(--red))';
-}, 120);
+/* ==================== RENDERING ADMIN DASHBOARD ==================== */
+function renderAdminView() {
+  if (!S) return;
+  const current = S.current;
+  const setting = S.setting || {};
+  const isLogged = !!LS.admin;
 
-/* ================== azioni utente ================== */
-async function doJoin(name){
-  const r = await api('/api/join', {name});
-  if(!r.ok){ toast(r.error || 'Errore', 'err'); return null; }
-  me = {name:r.name, token:r.token};
-  LS.token = r.token;
-  return me;
-}
+  $('admin-login-view').style.display = isLogged ? 'none' : 'block';
+  $('admin-dashboard-view').classList.toggle('hidden', !isLogged);
+  $('btn-admin-toggle').classList.toggle('admin-active', isLogged);
 
-$('join-btn').onclick = async ()=>{
-  const name = $('join-name').value.trim();
-  if(!name){ toast('Inserisci il tuo nome 😉','err'); $('join-name').focus(); return; }
-  $('join-btn').disabled = true; $('join-btn').textContent='Attendi…';
-  const ok = await doJoin(name);
-  $('join-btn').disabled = false; $('join-btn').textContent='ENTRA IN ASTA →';
-  if(ok) toast('Benvenuto '+ok.name+'! 🎉','win');
-};
-$('join-name').addEventListener('keydown', e=>{ if(e.key==='Enter') $('join-btn').click(); });
+  if (!isLogged) return;
 
-let lastClick = 0;
-$('bid-btn').onclick = async ()=>{
-  if(!me) { openNameModal(); return; }
-  if(Date.now() - lastClick < 350) return;   // protezione doppio click
-  const r = await api('/api/bid', {token: me.token});
-  if(r.ok){
-    lastClick = Date.now();
-    toast('€'+fmt(r.value)+' — sei in testa! 🔥','win');
-    boost();
+  // 1. Giocatore Corrente
+  if (current) {
+    // Aggiorna solo se non sta digitando
+    if (document.activeElement !== $('adm-edit-name')) $('adm-edit-name').value = current.name;
+    if (document.activeElement !== $('adm-edit-base')) $('adm-edit-base').value = current.base;
+    if (document.activeElement !== $('adm-edit-val')) $('adm-edit-val').value = S.value;
+    if (document.activeElement !== $('adm-edit-winner')) $('adm-edit-winner').value = S.winner || '';
+    $('adm-win-name').textContent = S.winner ? S.winner : 'Nessuno';
   } else {
-    toast(r.error || 'Offerta non valida','err');
+    if (document.activeElement !== $('adm-edit-name')) $('adm-edit-name').value = '';
+    if (document.activeElement !== $('adm-edit-base')) $('adm-edit-base').value = '';
+    if (document.activeElement !== $('adm-edit-val')) $('adm-edit-val').value = '';
+    if (document.activeElement !== $('adm-edit-winner')) $('adm-edit-winner').value = '';
+    $('adm-win-name').textContent = '—';
+  }
+
+  $('btn-adm-save-player').disabled = !current;
+  $('btn-adm-award').disabled = !current;
+  $('btn-adm-unsold').disabled = !current;
+  $('btn-adm-close-now').disabled = !current;
+  $('btn-adm-next-queue').disabled = !!current || !(S.queue && S.queue.length);
+
+  // 2. Impostazioni
+  if (document.activeElement !== $('adm-cfg-timer')) $('adm-cfg-timer').value = setting.timerDuration ?? 30;
+  if (document.activeElement !== $('adm-cfg-threshold')) $('adm-cfg-threshold').value = setting.extendThreshold ?? 10;
+  if (document.activeElement !== $('adm-cfg-extsec')) $('adm-cfg-extsec').value = setting.extendSeconds ?? 10;
+  if (document.activeElement !== $('adm-cfg-extmode')) $('adm-cfg-extmode').value = setting.extendMode || 'set';
+  if (document.activeElement !== $('adm-cfg-inc')) $('adm-cfg-inc').value = setting.increment ?? 1;
+  if (document.activeElement !== $('adm-cfg-base')) $('adm-cfg-base').value = setting.baseDefault ?? 1;
+  if (document.activeElement !== $('adm-cfg-startopen')) $('adm-cfg-startopen').value = setting.startTimerOnOpen ? '1' : '0';
+  if (document.activeElement !== $('adm-cfg-autonext')) $('adm-cfg-autonext').value = setting.autoNext ? '1' : '0';
+
+  // 3. Tabella interattiva coda admin
+  const q = S.queue || [];
+  $('adm-interactive-queue').innerHTML = q.length ? q.map((it, idx) => `
+    <div class="adm-q-row">
+      <span style="font-weight:700;"><b>#${idx + 1}</b> ${esc(it.name)} (Base: €${fmt(it.base)})</span>
+      <div class="adm-q-actions">
+        <button class="btn-sm-icon" onclick="admStartSpecific(${idx})" title="Avvia subito questo giocatore">▶</button>
+        ${idx > 0 ? `<button class="btn-sm-icon" onclick="admMoveItem(${idx}, ${idx - 1})" title="Sposta su">⬆️</button>` : ''}
+        ${idx < q.length - 1 ? `<button class="btn-sm-icon" onclick="admMoveItem(${idx}, ${idx + 1})" title="Sposta giù">⬇️</button>` : ''}
+        <button class="btn-sm-icon" style="color:var(--red)" onclick="admRemoveItem(${idx})" title="Rimuovi">🗑️</button>
+      </div>
+    </div>
+  `).join('') : '<div style="color:var(--txt-mut); font-size:12px; text-align:center;">Coda vuota. Incolla una lista sopra.</div>';
+}
+
+/* ==================== GESTIONE ANIMAZIONE COUNTDOWN REALTIME ==================== */
+let lastBeepSecond = -1;
+function updateTimerLoop() {
+  requestAnimationFrame(updateTimerLoop);
+  if (!S) return;
+
+  const digitsEl = $('timer-digits');
+  const fillEl = $('countdown-fill');
+  const bannerEl = $('anti-snipe-banner');
+
+  if (!S.current || S.phase !== 'auction') {
+    digitsEl.textContent = '--';
+    digitsEl.classList.remove('urgent');
+    fillEl.style.width = '100%';
+    fillEl.style.background = 'linear-gradient(90deg, var(--green), var(--gold))';
+    bannerEl.classList.remove('active');
+    lastBeepSecond = -1;
+    return;
+  }
+
+  if (S.isPaused) {
+    const sec = Math.ceil((S.pausedRemaining || 0) / 1000);
+    digitsEl.textContent = sec + 's [PAUSA]';
+    digitsEl.classList.remove('urgent');
+    fillEl.style.background = 'var(--gold)';
+    bannerEl.classList.remove('active');
+    return;
+  }
+
+  if (!S.expiresAt) {
+    digitsEl.textContent = 'In attesa offerta';
+    digitsEl.classList.remove('urgent');
+    fillEl.style.width = '100%';
+    bannerEl.classList.remove('active');
+    return;
+  }
+
+  const now = Date.now() + clientTimeOffset;
+  const leftMs = Math.max(0, S.expiresAt - now);
+  const leftSec = leftMs / 1000;
+  const totalDurationSec = (S.setting && S.setting.timerDuration) ? S.setting.timerDuration : 30;
+  const threshold = (S.setting && S.setting.extendThreshold) ? S.setting.extendThreshold : 10;
+
+  // Visualizzazione numerica
+  if (leftSec <= 9.9) {
+    digitsEl.textContent = leftSec.toFixed(1) + 's';
+  } else {
+    digitsEl.textContent = Math.ceil(leftSec) + 's';
+  }
+
+  // Animazione barre e colori
+  const pct = Math.min(100, Math.max(0, (leftSec / totalDurationSec) * 100));
+  fillEl.style.width = pct + '%';
+
+  // Modalità Anti-sniping attiva (sotto la soglia)
+  if (leftSec <= threshold && leftSec > 0) {
+    bannerEl.classList.add('active');
+  } else {
+    bannerEl.classList.remove('active');
+  }
+
+  // Gestione allarmi visivi e sonori
+  if (leftSec <= 4.0 && leftSec > 0) {
+    digitsEl.classList.add('urgent');
+    fillEl.style.background = 'var(--red)';
+    const secFloor = Math.floor(leftSec);
+    if (secFloor !== lastBeepSecond && secFloor <= 3 && secFloor >= 1) {
+      lastBeepSecond = secFloor;
+      playBeep(440, 0.09, 'sine');
+    }
+  } else if (leftSec <= threshold) {
+    digitsEl.classList.remove('urgent');
+    fillEl.style.background = 'linear-gradient(90deg, var(--gold), #ea580c)';
+  } else {
+    digitsEl.classList.remove('urgent');
+    fillEl.style.background = 'linear-gradient(90deg, var(--green), var(--gold))';
+  }
+}
+requestAnimationFrame(updateTimerLoop);
+
+/* ==================== AZIONI PARTECIPANTE ==================== */
+async function joinAuction(name) {
+  const res = await api('/api/join', { name });
+  if (!res.ok) {
+    toast(res.error || 'Errore durante l\'accesso', 'err');
+    return false;
+  }
+  me = { name: res.name, token: res.token };
+  LS.token = res.token;
+  toast('Benvenuto in sala, ' + res.name + '! 🎉', 'win');
+  return true;
+}
+
+$('btn-join-submit').onclick = async () => {
+  const name = $('input-join-name').value.trim();
+  if (!name) {
+    toast('Inserisci il tuo nome per continuare', 'err');
+    $('input-join-name').focus();
+    return;
+  }
+  $('btn-join-submit').disabled = true;
+  await joinAuction(name);
+  $('btn-join-submit').disabled = false;
+};
+$('input-join-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('btn-join-submit').click();
+});
+
+let lastBidClick = 0;
+$('bid-button').onclick = async () => {
+  if (!me) {
+    openModalName();
+    return;
+  }
+  if (Date.now() - lastBidClick < 250) return;
+  lastBidClick = Date.now();
+
+  const res = await api('/api/bid', { token: me.token });
+  if (res.ok) {
+    toast('€ ' + fmt(res.value) + ' — Sei in testa! 🔥', 'win');
+    animateBidButton();
+  } else {
+    toast(res.error || 'Offerta non valida', 'err');
   }
 };
 
-function boost(){
-  const btn = $('bid-btn');
-  btn.style.animation='none'; void btn.offsetWidth;
-  btn.style.animation='boost .35s ease';
+function animateBidButton() {
+  const b = $('bid-button');
+  b.style.transform = 'scale(0.96)';
+  setTimeout(() => { b.style.transform = ''; }, 120);
 }
-const stEl = document.createElement('style');
-stEl.textContent = '@keyframes boost{0%{transform:scale(1)}35%{transform:scale(1.06)}100%{transform:scale(1)}}';
-document.head.appendChild(stEl);
 
-/* ================== modal nome ================== */
-function openNameModal(){ $('name-modal').classList.add('show'); setTimeout(()=>$('modal-name').focus(),60); }
-function closeNameModal(){ $('name-modal').classList.remove('show'); }
-$('name-modal').addEventListener('click', e=>{ if(e.target===$('name-modal')) closeNameModal(); });
-$('modal-name').addEventListener('keydown', e=>{ if(e.key==='Enter') $('modal-go').click(); });
-$('modal-go').onclick = async ()=>{
-  const name = $('modal-name').value.trim();
-  if(!name){ toast('Inserisci un nome','err'); return; }
-  $('modal-go').disabled = true;
-  const ok = await doJoin(name);
-  $('modal-go').disabled = false;
-  if(ok){ closeNameModal(); toast('Benvenuto '+ok.name+'! 🎉','win'); }
+/* ==================== SOUND TOGGLE ==================== */
+$('btn-sound-toggle').onclick = () => {
+  soundEnabled = !soundEnabled;
+  LS.sound = soundEnabled;
+  $('btn-sound-toggle').textContent = soundEnabled ? '🔊' : '🔇';
+  toast(soundEnabled ? 'Suoni abilitati 🔊' : 'Suoni disattivati 🔇');
+  if (soundEnabled) playBeep(600, 0.05);
+};
+if (!soundEnabled) $('btn-sound-toggle').textContent = '🔇';
+
+/* ==================== MODALS ==================== */
+function openModalName() {
+  $('modal-name-overlay').classList.add('show');
+  setTimeout(() => $('modal-name-input').focus(), 100);
+}
+function closeModalName() {
+  $('modal-name-overlay').classList.remove('show');
+}
+$('modal-name-overlay').addEventListener('click', e => {
+  if (e.target === $('modal-name-overlay')) closeModalName();
+});
+$('modal-name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('btn-modal-name-submit').click();
+});
+$('btn-modal-name-submit').onclick = async () => {
+  const name = $('modal-name-input').value.trim();
+  if (!name) {
+    toast('Inserisci un nome valido', 'err');
+    return;
+  }
+  const ok = await joinAuction(name);
+  if (ok) closeModalName();
 };
 
-/* quando l'asta è chiusa e la lobby è piena di gente, offri la partecipazione */
-$('auction-panel').addEventListener('click', ()=>{
-  if(!me && S && (S.phase==='auction')) openNameModal();
-});
-document.addEventListener('keydown', e=>{
-  if(e.code==='Space' && !me && S && S.phase==='auction'){ e.preventDefault(); openNameModal(); }
-});
+/* Roster Modal */
+function showRosterModal(pname) {
+  if (!S || !S.participants) return;
+  const p = S.participants.find(x => x.name.toLowerCase() === pname.toLowerCase());
+  if (!p) return;
 
-/* ================== admin ================== */
-function renderAdmin(){
-  if(!S) return;
-  $('adm-current').textContent = S.current ? S.current.name : '—';
-  $('adm-award-name').textContent = S.winner ? S.winner : 'nessuno';
-  $('adm-inc').value = S.increment;
-  $('adm-auto').value = S.autoClose;
-  $('adm-base').value = S.baseDefault;
-  $('adm-autonext').value = S.autoNext ? '1' : '0';
-  $('adm-award').disabled = !S.current;
-  $('adm-nobody').disabled = !S.current;
-  $('adm-close').disabled = !S.current;
-  $('adm-next').disabled = !!S.current || !S.queue.length;
+  $('roster-modal-title').textContent = 'Rosa di ' + p.name;
+  const roster = p.roster || {};
+  const players = Object.keys(roster);
+  $('roster-modal-subtitle').textContent = `Totale speso: € ${fmt(p.spent)} · ${players.length} giocatori`;
+
+  if (!players.length) {
+    $('roster-modal-list').innerHTML = '<div style="color:var(--txt-mut); text-align:center; padding:10px;">Nessun giocatore acquistato finora.</div>';
+  } else {
+    $('roster-modal-list').innerHTML = players.map(pl => `
+      <div class="roster-item">
+        <span>${esc(pl)}</span>
+        <span class="r-price">€ ${fmt(roster[pl])}</span>
+      </div>
+    `).join('');
+  }
+
+  $('modal-roster-overlay').classList.add('show');
 }
-function adm(payload){ return api('/api/admin', Object.assign({adminToken: LS.admin}, payload)); }
+$('btn-close-roster-modal').onclick = () => $('modal-roster-overlay').classList.remove('show');
+$('modal-roster-overlay').addEventListener('click', e => {
+  if (e.target === $('modal-roster-overlay')) $('modal-roster-overlay').classList.remove('show');
+});
 
-$('btn-admin').onclick = ()=>{
+/* ==================== AZIONI ASTATORE (ADMIN) ==================== */
+$('btn-admin-toggle').onclick = () => {
   const panel = $('admin-panel');
-  const logged = !!LS.admin;
-  if(panel.classList.contains('hidden')){
+  if (panel.classList.contains('hidden')) {
     panel.classList.remove('hidden');
-    $('admin-login').style.display = logged ? 'none' : '';
-    $('admin-actions').classList.toggle('hidden', !logged);
-    $('btn-admin').classList.add('active'); $('btn-admin').textContent='🔧 Chiudi pannello';
-    if(LS.admin) loadQueueIntoAdmin();
+    $('admin-passcode-input').focus();
   } else {
     panel.classList.add('hidden');
-    $('btn-admin').classList.remove('active'); $('btn-admin').textContent='🔧 Astatore';
   }
 };
-$('admin-login-btn').onclick = async ()=>{
-  const r = await api('/api/admin/login', {passcode: $('admin-pass').value});
-  if(r.ok){
-    LS.admin = r.adminToken;
-    $('admin-login').style.display='none';
-    $('admin-actions').classList.remove('hidden');
-    toast('Pannello astatore attivo 🛠','win');
-    loadQueueIntoAdmin();
-  } else toast(r.error||'Passcode errato','err');
+
+$('btn-admin-login').onclick = async () => {
+  const pass = $('admin-passcode-input').value.trim();
+  const res = await api('/api/admin/login', { passcode: pass });
+  if (res.ok) {
+    LS.admin = res.adminToken;
+    toast('Accesso Astatore confermato! 🛠️', 'win');
+    renderAdminView();
+  } else {
+    toast(res.error || 'Passcode non valida', 'err');
+  }
 };
 
-function escapeNewlines(t){ return t.replace(/\\n/g,'\n'); }
-function loadQueueIntoAdmin(){
-  const q = S.queue || [];
-  const cur = S.current?[{name:S.current.name, base:S.current.base}]:[];
-  const txt = [...cur, ...q].map(p => p.base!=null && p.base!==S.baseDefault ? p.name+', '+p.base : p.name).join('\n');
-  $('adm-queue').value = txt;
-}
-$('adm-queue').addEventListener('input', e=>{ e.target.value = escapeNewlines(e.target.value); });
+$('btn-adm-logout').onclick = () => {
+  LS.admin = '';
+  toast('Logout effettuato');
+  renderAdminView();
+};
 
-$('adm-load').onclick = async ()=>{
-  const list = $('adm-queue').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
-    const m = l.match(/^(.+?),(?:\s*)(\d+(?:[.,]\d+)?)?$/);
-    if(m) return {name: m[1].trim(), base: parseFloat(m[2].replace(',', '.'))};
-    const n = l.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)$/);
-    if(n) return {name: n[1].trim(), base: parseFloat(n[2].replace(',', '.'))};
-    return {name: l};
+// 1. Salva Modifiche Giocatore Corrente
+$('btn-adm-save-player').onclick = async () => {
+  const name = $('adm-edit-name').value.trim();
+  const base = Number($('adm-edit-base').value);
+  const value = Number($('adm-edit-val').value);
+  const winner = $('adm-edit-winner').value.trim();
+  if (!name) { toast('Inserisci il nome del giocatore', 'err'); return; }
+
+  const res = await admApi('editCurrent', { name, base, value, winner });
+  if (res.ok) toast('Giocatore aggiornato in tempo reale! ✏️', 'win');
+  else toast(res.error || 'Errore', 'err');
+};
+
+// 2. Azioni Aggiudicazione / Chiusura
+$('btn-adm-award').onclick = async () => {
+  const res = await admApi('award');
+  if (res.ok) toast('Giocatore aggiudicato! 🏅', 'win');
+  else toast(res.error || 'Errore', 'err');
+};
+$('btn-adm-unsold').onclick = async () => {
+  const res = await admApi('award', { none: true });
+  if (res.ok) toast('Giocatore svenduto / non assegnato', 'win');
+};
+$('btn-adm-close-now').onclick = async () => {
+  const res = await admApi('award');
+  if (res.ok) toast('Asta chiusa subito', 'win');
+};
+$('btn-adm-next-queue').onclick = async () => {
+  const res = await admApi('startNext');
+  if (res.ok) toast('Nuovo giocatore in asta! ▶', 'win');
+  else toast(res.error || 'Errore', 'err');
+};
+
+// 3. Controlli Timer in Tempo Reale
+$('btn-timer-pause').onclick = async () => {
+  const isPaused = S ? S.isPaused : false;
+  await admApi('adjustTimer', { pause: !isPaused });
+  toast(!isPaused ? 'Asta messa in pausa ⏸️' : 'Asta ripresa ▶', 'win');
+};
+$('btn-timer-restart').onclick = async () => {
+  await admApi('adjustTimer', { restart: true });
+  toast('Timer riavviato 🔄', 'win');
+};
+$('btn-timer-add5').onclick = async () => { await admApi('adjustTimer', { addSeconds: 5 }); toast('+5 secondi aggiunti ➕'); };
+$('btn-timer-add10').onclick = async () => { await admApi('adjustTimer', { addSeconds: 10 }); toast('+10 secondi aggiunti ➕'); };
+$('btn-timer-sub5').onclick = async () => { await admApi('adjustTimer', { addSeconds: -5 }); toast('-5 secondi rimossi ➖'); };
+
+// 4. Lancia Giocatore Rapido
+$('btn-adm-quick-start').onclick = async () => {
+  const name = $('adm-quick-name').value.trim();
+  const base = Number($('adm-quick-base').value) || 1;
+  if (!name) { toast('Inserisci il nome del giocatore', 'err'); return; }
+
+  const res = await admApi('startCustom', { name, base });
+  if (res.ok) {
+    toast(`Asta aperta per ${name}! 🚀`, 'win');
+    $('adm-quick-name').value = '';
+  } else toast(res.error || 'Errore', 'err');
+};
+$('btn-adm-quick-add-queue').onclick = async () => {
+  const name = $('adm-quick-name').value.trim();
+  const base = Number($('adm-quick-base').value) || 1;
+  if (!name) { toast('Inserisci il nome del giocatore', 'err'); return; }
+
+  const res = await admApi('queueAdd', { name, base });
+  if (res.ok) {
+    toast(`Aggiunto ${name} in fondo alla lista! 📋`, 'win');
+    $('adm-quick-name').value = '';
+  } else toast(res.error || 'Errore', 'err');
+};
+
+// 5. Salva Impostazioni
+$('btn-adm-save-settings').onclick = async () => {
+  const payload = {
+    timerDuration: Number($('adm-cfg-timer').value),
+    extendThreshold: Number($('adm-cfg-threshold').value),
+    extendSeconds: Number($('adm-cfg-extsec').value),
+    extendMode: $('adm-cfg-extmode').value,
+    increment: Number($('adm-cfg-inc').value),
+    baseDefault: Number($('adm-cfg-base').value),
+    startTimerOnOpen: $('adm-cfg-startopen').value === '1',
+    autoNext: $('adm-cfg-autonext').value === '1',
+  };
+  const newPass = $('adm-cfg-passcode').value.trim();
+  if (newPass) payload.passcode = newPass;
+
+  const res = await admApi('settings', payload);
+  if (res.ok) {
+    toast('Impostazioni salvate con successo! 💾', 'win');
+    $('adm-cfg-passcode').value = '';
+  } else toast(res.error || 'Errore nel salvataggio', 'err');
+};
+
+// 6. Carica Lista Massiva
+$('btn-adm-load-queue').onclick = async () => {
+  const lines = $('adm-queue-textarea').value.split('\n').map(l => l.trim()).filter(Boolean);
+  const defaultBase = (S && S.setting) ? S.setting.baseDefault : 1;
+  const list = lines.map(line => {
+    const m = line.match(/^(.+?)[,;\t]\s*(\d+(?:[.,]\d+)?)$/);
+    if (m) return { name: m[1].trim(), base: parseFloat(m[2].replace(',', '.')) };
+    const m2 = line.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)$/);
+    if (m2) return { name: m2[1].trim(), base: parseFloat(m2[2].replace(',', '.')) };
+    return { name: line, base: defaultBase };
   });
-  const r = await adm({action:'queue', payload:{list}});
-  if(r.ok){
-    toast('Lista caricata: '+r.count+' giocatori 📋','win');
-    if(!S.current){ const n = await adm({action:'startNext'}); if(n.ok) toast('Via! Prima asta aperta ▶','win'); }
-  } else toast(r.error||'Errore','err');
-};
-$('adm-next').onclick = async ()=>{ const r = await adm({action:'startNext'}); if(!r.ok) toast(r.error||'Errore','err'); else toast('Nuova asta aperta ▶','win'); };
-$('adm-award').onclick = async ()=>{ const r = await adm({action:'award'}); if(!r.ok) toast(r.error||'Errore','err'); else toast('Aggiudicato! 🏅','win'); };
-$('adm-nobody').onclick = async ()=>{ await adm({action:'award', payload:{none:true}}); };
-$('adm-close').onclick = async ()=>{ await adm({action:'award'}); };
-$('adm-save').onclick = async ()=>{
-  const r = await adm({action:'settings', payload:{
-    increment: Number($('adm-inc').value)||1,
-    autoClose: Number($('adm-auto').value),
-    baseDefault: Number($('adm-base').value)||0,
-    autoNext: $('adm-autonext').value==='1',
-  }});
-  toast(r.ok ? 'Impostazioni salvate 💾' : (r.error||'Errore'), r.ok?'win':'err');
-};
-$('adm-reset').onclick = async ()=>{
-  if(!confirm('⚠️ Reset TOTALE: azzera tutto (partecipanti, lista, storico). Confermi?')) return;
-  const r = await adm({action:'reset'});
-  if(r.ok) toast('Asta azzerata 🗑','win');
+
+  const res = await admApi('queue', { list });
+  if (res.ok) {
+    toast(`Lista caricata: ${res.count} giocatori! 📋`, 'win');
+  } else toast(res.error || 'Errore nel caricamento', 'err');
 };
 
-/* ================== avvio ================== */
-(async function init(){
-  renderAll(null);
-  connect();
-  await hello();     // ripristina la sessione se il token esiste ancora
+// Funzioni helper gestione interattiva coda admin
+window.admStartSpecific = async (idx) => {
+  const res = await admApi('queueStart', { index: idx });
+  if (res.ok) toast('Giocatore messo in asta! ▶', 'win');
+};
+window.admMoveItem = async (fromIdx, toIdx) => {
+  await admApi('queueMove', { fromIndex: fromIdx, toIndex: toIdx });
+};
+window.admRemoveItem = async (idx) => {
+  await admApi('queueRemove', { index: idx });
+  toast('Giocatore rimosso dalla lista');
+};
+
+// 7. Reset e Conclusione Asta
+$('btn-adm-finish-auction').onclick = async () => {
+  if (!confirm('Vuoi concludere l\'asta e mostrare la classifica finale?')) return;
+  const res = await admApi('finish');
+  if (res.ok) toast('Asta conclusa! 🏆', 'win');
+};
+$('btn-adm-reset-all').onclick = async () => {
+  if (!confirm('⚠️ ATTENZIONE: Questo cancellerà tutti i dati (partecipanti, crediti, lista, storico). Sei sicuro al 100%?')) return;
+  const res = await admApi('reset');
+  if (res.ok) toast('Asta completamente azzerata 🗑️', 'win');
+};
+
+/* ==================== AVVIO APPLICAZIONE ==================== */
+(async function init() {
+  await restoreUserSession();
+  connectSSE();
 })();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3769d9a3cfcedb0',t:'MTc4ODc5MzU2OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>

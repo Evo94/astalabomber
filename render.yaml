@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: astalabomber
+    env: node
+    plan: free
+    buildCommand: ""
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: ADMIN_PASSCODE
+        value: admin
+        sync: false

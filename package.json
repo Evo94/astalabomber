@@ -1,0 +1,22 @@
+{
+  "name": "astalabomber",
+  "version": "1.0.0",
+  "description": "⚽ Asta Fantacalcio in tempo reale con modalità Admin e timer dinamico",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "fantacalcio",
+    "asta",
+    "realtime",
+    "sse",
+    "auction",
+    "nodejs"
+  ],
+  "author": "Evo94",
+  "license": "MIT"
+}
