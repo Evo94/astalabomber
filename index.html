@@ -198,12 +198,14 @@
   .badge-paused {
     background: var(--gold);
     color: #451a03;
-    padding: 2px 7px;
+    padding: 2px 8px;
     border-radius: 999px;
-    font-size: 9.5px;
+    font-size: 10px;
     font-weight: 900;
+    animation: pulseGold 1s infinite alternate;
   }
   @keyframes blink { 50% { opacity: 0.4; } }
+  @keyframes pulseGold { from { opacity: 0.8; } to { opacity: 1; box-shadow: 0 0 8px rgba(251, 191, 36, 0.8); } }
 
   #player-title {
     font-size: clamp(32px, 8.5vw, 48px);
@@ -318,6 +320,98 @@
   @keyframes pulseYellow {
     from { opacity: 0.85; }
     to { opacity: 1; border-color: rgba(251, 191, 36, 0.9); }
+  }
+
+  /* Banner Avviso Pausa Generale */
+  .pause-notice-banner {
+    display: none;
+    margin-top: 12px;
+    background: linear-gradient(135deg, rgba(234, 88, 12, 0.25), rgba(251, 191, 36, 0.2));
+    border: 1.5px solid var(--gold);
+    border-radius: 14px;
+    padding: 10px 14px;
+    color: #fef08a;
+    font-size: 13.5px;
+    animation: bannerPulse 1.5s infinite alternate;
+  }
+  .pause-notice-banner.show {
+    display: block;
+  }
+  @keyframes bannerPulse {
+    from { opacity: 0.9; }
+    to { opacity: 1; box-shadow: 0 0 16px rgba(251, 191, 36, 0.35); }
+  }
+
+  /* ========== BARRA CONTROLLI RAPIDI ASTATORE (IN PRIMO PIANO) ========== */
+  .admin-quick-bar {
+    background: linear-gradient(180deg, rgba(251, 191, 36, 0.18), rgba(0, 0, 0, 0.45));
+    border: 1.5px solid rgba(251, 191, 36, 0.55);
+    border-radius: 20px;
+    padding: 12px 14px;
+    margin-top: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+  }
+  .admin-quick-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    margin-bottom: 9px;
+    color: #fde68a;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .admin-quick-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn-quick-action {
+    padding: 12px 14px;
+    border-radius: 13px;
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .btn-quick-action.pause-btn {
+    flex: 2;
+    min-width: 180px;
+    background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+    color: #451a03;
+    box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);
+  }
+  .btn-quick-action.resume-btn {
+    flex: 2;
+    min-width: 180px;
+    background: linear-gradient(180deg, #34d399 0%, #059669 100%);
+    color: #022c1b;
+    box-shadow: 0 4px 16px rgba(34, 197, 94, 0.5);
+    animation: pulseResume 1.2s infinite;
+  }
+  @keyframes pulseResume {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.025); filter: brightness(1.15); }
+    100% { transform: scale(1); }
+  }
+  .btn-quick-action.ghost {
+    flex: 1;
+    min-width: 65px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--txt);
+    border: 1px solid var(--line);
+  }
+  .btn-quick-action.ghost:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: var(--green);
   }
 
   /* ========== BOTTONE GIGANTE RILANCIO ========== */
@@ -985,6 +1079,12 @@
     <!-- Stato Miglior Offerente -->
     <div id="bidder-status">In attesa della prima offerta…</div>
 
+    <!-- Banner Notifica Pausa per tutti -->
+    <div id="pause-notice-banner" class="pause-notice-banner">
+      ⏸️ <b>ASTA SOSPESA DALL'ASTATORE</b><br>
+      <span style="font-size:12px; font-weight:600; opacity:0.95;">Il tempo è congelato per chiarimenti o domande. I rilanci riprenderanno a breve!</span>
+    </div>
+
     <!-- Timer & Countdown Bar -->
     <div class="timer-section">
       <div class="timer-top-info">
@@ -999,6 +1099,23 @@
       </div>
     </div>
   </section>
+
+  <!-- ==================== BARRA CONTROLLI RAPIDI ASTATORE (SEMPRE IN PRIMO PIANO PER ADMIN) ==================== -->
+  <div id="admin-quick-bar" class="admin-quick-bar hidden">
+    <div class="admin-quick-header">
+      <span>👑 <b>Controlli Rapidi Astatore</b></span>
+      <span id="quick-bar-status" style="color:var(--gold);">ASTA ATTIVA</span>
+    </div>
+    <div class="admin-quick-buttons">
+      <button id="btn-quick-pause" type="button" class="btn-quick-action pause-btn">
+        <span id="quick-pause-icon">⏸️</span>
+        <span id="quick-pause-label">METTI IN PAUSA TIMER</span>
+      </button>
+      <button id="btn-quick-add5" type="button" class="btn-quick-action ghost" title="Aggiungi 5 secondi">➕ +5s</button>
+      <button id="btn-quick-add10" type="button" class="btn-quick-action ghost" title="Aggiungi 10 secondi">➕ +10s</button>
+      <button id="btn-quick-restart" type="button" class="btn-quick-action ghost" title="Riavvia il timer al tempo iniziale">🔄 Riavvia</button>
+    </div>
+  </div>
 
   <!-- ==================== PULSANTE GIGANTE RILANCIO ==================== -->
   <button id="bid-button" type="button" disabled>
@@ -1393,7 +1510,6 @@ async function restoreUserSession() {
 
 function applyState(newState) {
   const prevPrice = S ? S.value : 0;
-  const prevWinner = S ? S.winner : null;
   S = newState;
 
   if (prevPrice !== S.value && S.value > 0) {
@@ -1410,6 +1526,8 @@ function renderAll() {
   const current = S.current;
   const phase = S.phase;
   const setting = S.setting || {};
+  const isPaused = !!S.isPaused;
+  const isAdmin = !!LS.admin;
 
   /* --- Pannello Asta Live --- */
   $('player-title').textContent = current ? current.name : '—';
@@ -1419,23 +1537,28 @@ function renderAll() {
   const phaseText = $('auction-phase-text');
   const liveBadge = $('badge-live-tag');
   const pausedBadge = $('badge-paused-tag');
+  const pauseBanner = $('pause-notice-banner');
 
   if (phase === 'finished') {
     phaseText.textContent = 'ASTA CONCLUSA 🏆';
     liveBadge.classList.add('hidden');
     pausedBadge.classList.add('hidden');
+    pauseBanner.classList.remove('show');
   } else if (!current) {
     phaseText.textContent = 'IN ATTESA DELLA PROSSIMA ASTA';
     liveBadge.classList.add('hidden');
     pausedBadge.classList.add('hidden');
-  } else if (S.isPaused) {
+    pauseBanner.classList.remove('show');
+  } else if (isPaused) {
     phaseText.textContent = 'ASTA IN PAUSA';
     liveBadge.classList.add('hidden');
     pausedBadge.classList.remove('hidden');
+    pauseBanner.classList.add('show');
   } else {
     phaseText.textContent = S.winner ? 'ASTA IN CORSO' : 'PRIMA OFFERTA';
     liveBadge.classList.remove('hidden');
     pausedBadge.classList.add('hidden');
+    pauseBanner.classList.remove('show');
   }
 
   const bidderStatus = $('bidder-status');
@@ -1457,6 +1580,33 @@ function renderAll() {
   const threshold = setting.extendThreshold || 10;
   $('threshold-val').textContent = threshold;
 
+  /* --- Barra Controlli Rapidi Astatore (In primo piano per Admin) --- */
+  const quickBar = $('admin-quick-bar');
+  if (isAdmin && current && phase === 'auction') {
+    quickBar.classList.remove('hidden');
+    const qPauseBtn = $('btn-quick-pause');
+    const qPauseIcon = $('quick-pause-icon');
+    const qPauseLabel = $('quick-pause-label');
+    const qStatus = $('quick-bar-status');
+
+    if (isPaused) {
+      qPauseBtn.className = 'btn-quick-action resume-btn';
+      qPauseIcon.textContent = '▶️';
+      const secLeft = Math.ceil((S.pausedRemaining || 0) / 1000);
+      qPauseLabel.textContent = `RIPRENDI TIMER (${secLeft}s)`;
+      qStatus.textContent = '⏸️ IN PAUSA';
+      qStatus.style.color = 'var(--gold)';
+    } else {
+      qPauseBtn.className = 'btn-quick-action pause-btn';
+      qPauseIcon.textContent = '⏸️';
+      qPauseLabel.textContent = 'METTI IN PAUSA IL TIMER';
+      qStatus.textContent = '🔴 LIVE';
+      qStatus.style.color = 'var(--red)';
+    }
+  } else {
+    quickBar.classList.add('hidden');
+  }
+
   /* --- Pulsante Gigante Rilancio --- */
   const btn = $('bid-button');
   const mainTxt = $('bid-main-text');
@@ -1476,12 +1626,12 @@ function renderAll() {
     mainTxt.textContent = 'PUNTA!';
     subTxt.textContent = phase === 'finished' ? 'l\'asta è conclusa' : 'in attesa del prossimo giocatore';
     preview.innerHTML = '';
-  } else if (S.isPaused) {
+  } else if (isPaused) {
     btn.disabled = true;
     btn.classList.remove('leading');
-    mainTxt.textContent = 'IN PAUSA ⏸️';
-    subTxt.textContent = 'l\'astatore ha sospeso il timer';
-    preview.innerHTML = '';
+    mainTxt.textContent = '⏸️ ASTA IN PAUSA';
+    subTxt.textContent = 'l\'astatore ha sospeso il tempo per chiarimenti';
+    preview.innerHTML = '<span style="color:var(--gold);">Timer congelato. I rilanci riprenderanno non appena l\'astatore sbloccherà la pausa.</span>';
   } else if (S.winner === me.name) {
     btn.disabled = true;
     btn.classList.add('leading');
@@ -1590,7 +1740,6 @@ function renderAdminView() {
 
   // 1. Giocatore Corrente
   if (current) {
-    // Aggiorna solo se non sta digitando
     if (document.activeElement !== $('adm-edit-name')) $('adm-edit-name').value = current.name;
     if (document.activeElement !== $('adm-edit-base')) $('adm-edit-base').value = current.base;
     if (document.activeElement !== $('adm-edit-val')) $('adm-edit-val').value = S.value;
@@ -1609,6 +1758,18 @@ function renderAdminView() {
   $('btn-adm-unsold').disabled = !current;
   $('btn-adm-close-now').disabled = !current;
   $('btn-adm-next-queue').disabled = !!current || !(S.queue && S.queue.length);
+
+  // Aggiorna etichetta tasto pausa pannello
+  const pBtn = $('btn-timer-pause');
+  if (S.isPaused) {
+    pBtn.textContent = '▶️ Riprendi Timer';
+    pBtn.style.background = 'rgba(34, 197, 94, 0.3)';
+    pBtn.style.borderColor = 'var(--green)';
+  } else {
+    pBtn.textContent = '⏸️ Metti in Pausa';
+    pBtn.style.background = '';
+    pBtn.style.borderColor = '';
+  }
 
   // 2. Impostazioni
   if (document.activeElement !== $('adm-cfg-timer')) $('adm-cfg-timer').value = setting.timerDuration ?? 30;
@@ -1656,8 +1817,8 @@ function updateTimerLoop() {
   }
 
   if (S.isPaused) {
-    const sec = Math.ceil((S.pausedRemaining || 0) / 1000);
-    digitsEl.textContent = sec + 's [PAUSA]';
+    const sec = ((S.pausedRemaining || 0) / 1000).toFixed(1);
+    digitsEl.textContent = sec + 's ⏸️ [PAUSA]';
     digitsEl.classList.remove('urgent');
     fillEl.style.background = 'var(--gold)';
     bannerEl.classList.remove('active');
@@ -1847,7 +2008,7 @@ $('btn-admin-login').onclick = async () => {
   if (res.ok) {
     LS.admin = res.adminToken;
     toast('Accesso Astatore confermato! 🛠️', 'win');
-    renderAdminView();
+    renderAll();
   } else {
     toast(res.error || 'Passcode non valida', 'err');
   }
@@ -1856,8 +2017,33 @@ $('btn-admin-login').onclick = async () => {
 $('btn-adm-logout').onclick = () => {
   LS.admin = '';
   toast('Logout effettuato');
-  renderAdminView();
+  renderAll();
 };
+
+// Funzione unificata per toggle Pausa / Riprendi
+async function togglePause() {
+  const isPaused = S ? S.isPaused : false;
+  const res = await admApi('adjustTimer', { pause: !isPaused });
+  if (res.ok) {
+    toast(!isPaused ? '⏸️ Asta messa in pausa! Timer congelato.' : '▶️ Asta ripresa! Countdown attivo.', 'win');
+  } else {
+    toast(res.error || 'Errore durante la pausa', 'err');
+  }
+}
+
+// Handler Pausa Rapida in Primo Piano e nel Pannello
+$('btn-quick-pause').onclick = togglePause;
+$('btn-timer-pause').onclick = togglePause;
+
+// Handler Tasti Rapidi Aggiungi Tempo & Riavvia
+$('btn-quick-add5').onclick = async () => { await admApi('adjustTimer', { addSeconds: 5 }); toast('+5 secondi aggiunti ➕'); };
+$('btn-quick-add10').onclick = async () => { await admApi('adjustTimer', { addSeconds: 10 }); toast('+10 secondi aggiunti ➕'); };
+$('btn-quick-restart').onclick = async () => { await admApi('adjustTimer', { restart: true }); toast('Timer riavviato 🔄', 'win'); };
+
+$('btn-timer-restart').onclick = async () => { await admApi('adjustTimer', { restart: true }); toast('Timer riavviato 🔄', 'win'); };
+$('btn-timer-add5').onclick = async () => { await admApi('adjustTimer', { addSeconds: 5 }); toast('+5 secondi aggiunti ➕'); };
+$('btn-timer-add10').onclick = async () => { await admApi('adjustTimer', { addSeconds: 10 }); toast('+10 secondi aggiunti ➕'); };
+$('btn-timer-sub5').onclick = async () => { await admApi('adjustTimer', { addSeconds: -5 }); toast('-5 secondi rimossi ➖'); };
 
 // 1. Salva Modifiche Giocatore Corrente
 $('btn-adm-save-player').onclick = async () => {
@@ -1892,21 +2078,7 @@ $('btn-adm-next-queue').onclick = async () => {
   else toast(res.error || 'Errore', 'err');
 };
 
-// 3. Controlli Timer in Tempo Reale
-$('btn-timer-pause').onclick = async () => {
-  const isPaused = S ? S.isPaused : false;
-  await admApi('adjustTimer', { pause: !isPaused });
-  toast(!isPaused ? 'Asta messa in pausa ⏸️' : 'Asta ripresa ▶', 'win');
-};
-$('btn-timer-restart').onclick = async () => {
-  await admApi('adjustTimer', { restart: true });
-  toast('Timer riavviato 🔄', 'win');
-};
-$('btn-timer-add5').onclick = async () => { await admApi('adjustTimer', { addSeconds: 5 }); toast('+5 secondi aggiunti ➕'); };
-$('btn-timer-add10').onclick = async () => { await admApi('adjustTimer', { addSeconds: 10 }); toast('+10 secondi aggiunti ➕'); };
-$('btn-timer-sub5').onclick = async () => { await admApi('adjustTimer', { addSeconds: -5 }); toast('-5 secondi rimossi ➖'); };
-
-// 4. Lancia Giocatore Rapido
+// 3. Lancia Giocatore Rapido
 $('btn-adm-quick-start').onclick = async () => {
   const name = $('adm-quick-name').value.trim();
   const base = Number($('adm-quick-base').value) || 1;
@@ -1930,7 +2102,7 @@ $('btn-adm-quick-add-queue').onclick = async () => {
   } else toast(res.error || 'Errore', 'err');
 };
 
-// 5. Salva Impostazioni
+// 4. Salva Impostazioni
 $('btn-adm-save-settings').onclick = async () => {
   const payload = {
     timerDuration: Number($('adm-cfg-timer').value),
@@ -1952,7 +2124,7 @@ $('btn-adm-save-settings').onclick = async () => {
   } else toast(res.error || 'Errore nel salvataggio', 'err');
 };
 
-// 6. Carica Lista Massiva
+// 5. Carica Lista Massiva
 $('btn-adm-load-queue').onclick = async () => {
   const lines = $('adm-queue-textarea').value.split('\n').map(l => l.trim()).filter(Boolean);
   const defaultBase = (S && S.setting) ? S.setting.baseDefault : 1;
@@ -1983,7 +2155,7 @@ window.admRemoveItem = async (idx) => {
   toast('Giocatore rimosso dalla lista');
 };
 
-// 7. Reset e Conclusione Asta
+// 6. Reset e Conclusione Asta
 $('btn-adm-finish-auction').onclick = async () => {
   if (!confirm('Vuoi concludere l\'asta e mostrare la classifica finale?')) return;
   const res = await admApi('finish');
