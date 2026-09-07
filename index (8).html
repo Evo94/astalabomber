@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>⚽ Asta Fantacalcio</title>
+<style>
+  :root{
+    --bg1:#07130f; --bg2:#0d2a1f; --card:rgba(255,255,255,.055); --line:rgba(255,255,255,.10);
+    --green:#22c55e; --green2:#16a34a; --gold:#fbbf24; --red:#ef4444; --txt:#f2f7f4; --mut:#9db8ab; --blue:#38bdf8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+    background:radial-gradient(1200px 700px at 50% -10%,#14532d 0%,var(--bg2) 45%,var(--bg1) 100%) fixed;
+    color:var(--txt); min-height:100%; display:flex; flex-direction:column; overflow-x:hidden;
+  }
+  .pitch{position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:560px;width:100%;margin:0 auto;padding:14px 14px 40px;display:flex;flex-direction:column;flex:1}
+
+  /* ---------- header ---------- */
+  header{display:flex;align-items:center;gap:10px;padding:4px 2px 12px}
+  header .logo{font-size:26px}
+  header h1{font-size:20px;font-weight:800;letter-spacing:.5px}
+  header h1 span{color:var(--green)}
+  header .spacer{flex:1}
+  #me-chip{display:none;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
+  #me-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  #btn-admin{background:var(--card);border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s}
+  #btn-admin:hover{color:var(--txt);border-color:var(--green)}
+  #btn-admin.active{color:#052e16;background:var(--green);border-color:var(--green)}
+
+  /* ---------- pannello asta ---------- */
+  .auction-panel{
+    border-radius:22px;padding:18px 18px 22px;text-align:center;position:relative;overflow:hidden;
+    background:linear-gradient(180deg,rgba(34,197,94,.14),rgba(255,255,255,.03));border:1px solid rgba(34,197,94,.45);
+    box-shadow:0 18px 50px -18px rgba(0,0,0,.7), inset 0 0 60px rgba(34,197,94,.06);
+  }
+  .auction-panel::before{content:"";position:absolute;left:-40%;top:-140px;width:180%;height:200px;background:radial-gradient(closest-side,rgba(34,197,94,.22),transparent);pointer-events:none}
+  .panel-label{font-size:11px;letter-spacing:3px;font-weight:800;color:var(--mut);text-transform:uppercase}
+  .panel-label .live-badge{display:inline-block;background:var(--red);color:#fff;font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:999px;margin-left:6px;animation:blink 1.2s infinite}
+  @keyframes blink{50%{opacity:.45}}
+  #current-player{margin-top:8px;font-size:clamp(34px,9vw,54px);font-weight:900;line-height:1.1;text-shadow:0 4px 24px rgba(34,197,94,.35)}
+  #current-player .base{font-size:13px;font-weight:600;color:var(--mut);display:block;margin-top:2px}
+  #value-box{margin:14px auto 4px;font-size:clamp(64px,18vw,110px);font-weight:900;line-height:1;color:var(--gold);text-shadow:0 0 34px rgba(251,191,36,.35);font-variant-numeric:tabular-nums}
+  #value-box .cur{font-size:.45em;vertical-align:.55em;margin-right:2px;color:#fde68a}
+  #winner-line{margin-top:2px;font-size:16px;font-weight:700;min-height:24px}
+  #winner-line b{color:var(--green)}
+  #winner-line.locked b{color:var(--gold)}
+  #countdown-bar{height:5px;background:rgba(255,255,255,.08);border-radius:99px;margin-top:14px;overflow:hidden}
+  #countdown-fill{height:100%;width:100%;background:linear-gradient(90deg,var(--gold),var(--red));border-radius:99px}
+  .panel-note{font-size:11.5px;color:var(--mut);margin-top:8px}
+
+  /* ---------- bottone gigante ---------- */
+  #bid-btn{
+    margin:18px auto 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    width:100%;max-width:460px;height:118px;border:none;border-radius:26px;cursor:pointer;
+    background:linear-gradient(180deg,#34d399,#059669);color:#03291a;
+    font-size:27px;font-weight:900;letter-spacing:.5px;
+    box-shadow:0 12px 0 #065f46, 0 24px 40px -12px rgba(0,0,0,.65), inset 0 2px 0 rgba(255,255,255,.4);
+    transition:transform .06s, box-shadow .06s, filter .2s; user-select:none;
+  }
+  #bid-btn small{font-size:12px;font-weight:800;opacity:.75;letter-spacing:.4px}
+  #bid-btn:active{transform:translateY(8px);box-shadow:0 4px 0 #065f46, 0 14px 24px -12px rgba(0,0,0,.6)}
+  #bid-btn:disabled{background:linear-gradient(180deg,#4b5563,#374151);color:#9ca3af;box-shadow:0 12px 0 #1f2937,0 24px 40px -12px rgba(0,0,0,.65);cursor:not-allowed;filter:none;transform:none}
+  #bid-btn.done{background:linear-gradient(180deg,#fbbf24,#d97706);color:#451a03;box-shadow:0 12px 0 #92400e,0 24px 40px -12px rgba(0,0,0,.65)}
+  #bid-preview{margin-top:10px;text-align:center;font-size:13px;color:var(--mut);min-height:18px;font-weight:600}
+  #bid-preview b{color:var(--txt)}
+  #bid-preview .base-note{color:var(--gold)}
+
+  /* ---------- sezioni ---------- */
+  .section{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;margin-top:14px}
+  .section h2{font-size:13px;letter-spacing:1.8px;text-transform:uppercase;color:var(--mut);font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .section h2 .badge{background:var(--green);color:#052e16;font-size:11px;padding:1px 8px;border-radius:99px}
+  .count-label{font-size:12px;font-weight:700;color:var(--green);margin:12px 0 6px;text-transform:uppercase;letter-spacing:1px}
+
+  /* partecipanti */
+  #participants{display:flex;flex-wrap:wrap;gap:7px}
+  .pchip{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .pchip.leader{border-color:var(--gold);background:rgba(251,191,36,.15);color:#fde68a}
+  .pchip.leader::after{content:"🏆";font-size:12px}
+  .pchip .spent{color:var(--mut);font-weight:600;font-size:11.5px}
+  .empty-note{color:var(--mut);font-size:13px;font-style:italic}
+
+  /* lista asta */
+  #queue-list{display:flex;flex-direction:column;gap:5px}
+  .qrow{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:11px;padding:8px 11px;font-size:14px;font-weight:600}
+  .qrow.playing{background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.5)}
+  .qrow .idx{color:var(--mut);font-size:12px;min-width:22px}
+  .qrow .qname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qrow .qbase{color:var(--mut);font-size:12px;font-weight:700;white-space:nowrap}
+  .qrow .mark{color:var(--green);font-weight:900}
+  .qrow.sold .qname{text-decoration:line-through;opacity:.55}
+
+  /* storico */
+  #history{display:flex;flex-direction:column-reverse}
+  .hrow{display:flex;justify-content:space-between;gap:8px;padding:7px 4px;border-bottom:1px dashed rgba(255,255,255,.08);font-size:13.5px}
+  .hrow:last-child{border-bottom:none}
+  .hrow .hname{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hrow .hprice{color:var(--gold);font-weight:800;white-space:nowrap}
+  .hrow .hwho{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:38%}
+
+  /* ---------- Lobby ---------- */
+  #lobby{margin-top:6px}
+  .join-card{background:linear-gradient(180deg,rgba(34,197,94,.12),rgba(255,255,255,.03));border:1px solid rgba(34,197,94,.4);border-radius:22px;padding:26px 20px;text-align:center}
+  .join-card h2{font-size:22px;font-weight:900;margin-bottom:6px}
+  .join-card p{color:var(--mut);font-size:13.5px;margin-bottom:16px}
+  .join-card input{font-size:18px;text-align:center;padding:13px;border-radius:14px;width:100%;background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--txt);outline:none;transition:.15s}
+  .join-card input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,.2)}
+  .join-card button{margin-top:14px;width:100%;padding:15px;border:none;border-radius:14px;font-size:17px;font-weight:900;background:linear-gradient(180deg,#34d399,#059669);color:#03291a;cursor:pointer;transition:.15s}
+  .join-card button:hover{filter:brightness(1.1)}
+  .join-card button:disabled{opacity:.5;cursor:wait}
+  .waiting{display:none;text-align:center;padding:34px 16px}
+  .waiting .ball{font-size:54px;animation:spin 2.4s linear infinite;display:inline-block}
+  @keyframes spin{100%{transform:rotate(360deg)}}
+  .waiting h2{font-size:20px;margin-top:8px}
+  .waiting p{color:var(--mut);margin-top:8px;font-size:14px}
+  .waiting .hint{font-size:12.5px;color:var(--mut);margin-top:18px;opacity:.8}
+
+  /* ---------- final ---------- */
+  #final{text-align:center;padding:20px 0 6px}
+  #final .trophy{font-size:56px;animation:pop .5s}
+  @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+  #final h2{font-size:24px;font-weight:900;margin-top:6px}
+  #final p{color:var(--mut);margin-top:6px;font-size:14px}
+  .ranking{display:flex;flex-direction:column;gap:6px;margin-top:16px;text-align:left;max-width:420px;width:100%;margin-left:auto;margin-right:auto}
+  .rrow{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:13px;padding:10px 14px;font-weight:800;font-size:15px}
+  .rrow.podium{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.45)}
+  .rrow .medal{font-size:20px}
+  .rrow .rname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rrow .rspent{color:var(--gold);font-variant-numeric:tabular-nums}
+  .rrow .rum{color:var(--mut);font-weight:600;font-size:12px;white-space:nowrap}
+
+  /* ---------- admin ---------- */
+  #admin-panel{margin-top:14px}
+  .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .admin-box{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:14px;padding:12px}
+  .admin-box h3{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut);margin-bottom:9px}
+  .admin-box textarea{width:100%;min-height:110px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:10px;color:var(--txt);padding:10px;font-size:13.5px;font-family:inherit;resize:vertical;outline:none}
+  .admin-box textarea:focus{border-color:var(--blue)}
+  .field-row{margin-bottom:8px}
+  .field-row label{display:block;font-size:11.5px;color:var(--mut);font-weight:700;margin-bottom:3px}
+  .field-row input,.field-row select{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:9px;color:var(--txt);padding:8px 9px;font-size:14px;outline:none}
+  .field-row input:focus{border-color:var(--blue)}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .abtn{flex:1;min-width:120px;padding:11px;border:none;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;transition:.15s;background:linear-gradient(180deg,#34d399,#059669);color:#03291a}
+  .abtn:hover{filter:brightness(1.08)}
+  .abtn.blue{background:linear-gradient(180deg,#38bdf8,#0284c7);color:#082f49}
+  .abtn.gold{background:linear-gradient(180deg,#fbbf24,#d97706);color:#451a03}
+  .abtn.red{background:linear-gradient(180deg,#f87171,#dc2626);color:#fff}
+  .abtn.ghost{background:rgba(255,255,255,.08);color:var(--txt);border:1px solid var(--line)}
+  .abtn:disabled{opacity:.45;cursor:not-allowed}
+
+  /* ---------- modal nome ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
+  .overlay.show{display:flex}
+  .modal{background:linear-gradient(180deg,#0e2b1f,#081711);border:1px solid rgba(34,197,94,.4);border-radius:20px;padding:24px 20px;width:100%;max-width:360px;text-align:center;box-shadow:0 30px 80px -20px #000}
+  .modal h3{font-size:19px;margin-bottom:4px}
+  .modal p{color:var(--mut);font-size:13px;margin-bottom:14px}
+  .modal input{width:100%;font-size:17px;text-align:center;padding:12px;border-radius:12px;background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--txt);outline:none;margin-bottom:11px}
+  .modal input:focus{border-color:var(--green)}
+  .modal button{width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;font-weight:900;background:linear-gradient(180deg,#34d399,#059669);color:#03291a;cursor:pointer}
+
+  /* ---------- toast ---------- */
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#0b1f16;border:1px solid rgba(251,191,36,.5);color:var(--txt);padding:11px 20px;border-radius:999px;font-size:14px;font-weight:700;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:88vw;text-align:center;box-shadow:0 10px 30px -8px #000}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.err{border-color:rgba(239,68,68,.6)}
+  #toast.win{border-color:rgba(34,197,94,.7);background:#0e2e1d;color:#86efac}
+
+  footer{margin-top:auto;text-align:center;color:var(--mut);font-size:11.5px;padding-top:22px;opacity:.7}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<svg class="pitch" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+  <rect x="2" y="2" width="96" height="96" fill="none" stroke="#22c55e" stroke-opacity=".07" stroke-width="1.5"/>
+  <line x1="50" y1="2" x2="50" y2="98" stroke="#22c55e" stroke-opacity=".07" stroke-width="1"/>
+  <circle cx="50" cy="50" r="14" fill="none" stroke="#22c55e" stroke-opacity=".07" stroke-width="1"/>
+  <rect x="2" y="34" width="14" height="32" fill="none" stroke="#22c55e" stroke-opacity=".07" stroke-width="1"/>
+  <rect x="84" y="34" width="14" height="32" fill="none" stroke="#22c55e" stroke-opacity=".07" stroke-width="1"/>
+  <circle cx="50" cy="50" r="1.4" fill="#22c55e" fill-opacity=".1"/>
+</svg>
+
+<div class="wrap">
+  <header>
+    <div class="logo">⚽</div>
+    <h1>Asta <span>Fantacalcio</span></h1>
+    <div class="spacer"></div>
+    <div id="me-chip"><div class="dot"></div><span id="me-name"></span></div>
+    <button id="btn-admin" type="button">🔧 Astatore</button>
+  </header>
+
+  <!-- ======== PANNELLO ASTA ======== -->
+  <section id="auction-panel" class="auction-panel">
+    <div class="panel-label"><span id="phase-label">ASTA IN CORSO</span><span id="live-badge" class="live-badge">LIVE</span></div>
+    <div id="current-player">— <span class="base"></span></div>
+    <div id="value-box"><span class="cur">€</span><span id="value">0</span></div>
+    <div id="winner-line">In attesa della prima offerta…</div>
+    <div id="countdown-bar"><div id="countdown-fill"></div></div>
+    <div class="panel-note">L'asta scatta automaticamente quando il timer arriva a zero ⏱</div>
+  </section>
+
+  <!-- ======== BOTTONE GIGANTE ======== -->
+  <button id="bid-btn" type="button" disabled>
+    <span id="btn-main">PUNTA!</span>
+    <small id="btn-sub"></small>
+  </button>
+  <div id="bid-preview"></div>
+
+  <!-- ======== LOBBY ======== -->
+  <section id="lobby">
+    <div id="join-card" class="join-card">
+      <h2>Benvenuto all'asta! 👋</h2>
+      <p>Inserisci il tuo nome per partecipare.<br>Poi premi il grande pulsante verde per puntare.</p>
+      <input id="join-name" type="text" maxlength="24" placeholder="Il tuo nome…" autocomplete="off">
+      <button id="join-btn" type="button">ENTRA IN ASTA →</button>
+    </div>
+    <div id="waiting" class="waiting">
+      <span class="ball">⚽</span>
+      <h2>Ciao <b id="wait-name"></b>! Sei in sala d'asta 👊</h2>
+      <p id="wait-status">In attesa che l'astatore inizi l'asta…</p>
+      <div class="hint">I partecipanti connessi si vedono qui sotto ⬇</div>
+    </div>
+  </section>
+
+  <!-- ======== FINALE ======== -->
+  <section id="final" class="section hidden">
+    <div class="trophy">🏆</div>
+    <h2>Astacalcio conclusa!</h2>
+    <p>Ecco come è andata la spesa:</p>
+    <div id="ranking" class="ranking"></div>
+  </section>
+
+  <!-- ======== PARTECIPANTI ======== -->
+  <section id="participants-section" class="section">
+    <h2>👥 In sala d'asta <span id="pcount" class="badge">0</span></h2>
+    <div id="participants"><span class="empty-note">Ancora nessuno…</span></div>
+  </section>
+
+  <!-- ======== LISTA ASTA ======== -->
+  <section id="queue-section" class="section">
+    <h2>📋 Lista dell'asta <span id="qcount" class="badge">0</span></h2>
+    <div id="queue-list"><span class="empty-note">La lista dei giocatori comparirà qui.</span></div>
+  </section>
+
+  <!-- ======== STORICO ======== -->
+  <section id="history-section" class="section">
+    <h2>📜 Aggiudicati</h2>
+    <div id="history"><span class="empty-note">Nessun giocatore ancora assegnato.</span></div>
+  </section>
+
+  <footer>⚽ Asta Fantacalcio — si rinnova in tempo reale su tutti i dispositivi</footer>
+</div>
+
+<!-- ======== PANNELLO ASTATORE ======== -->
+<div id="admin-panel" class="section hidden">
+  <h2>🛠️ Pannello astatore</h2>
+  <div id="admin-login">
+    <p style="color:var(--mut);font-size:13.5px;margin-bottom:10px">Inserisci il passcode per gestire l'asta (default: <b>admin</b>).</p>
+    <div class="field-row"><input id="admin-pass" type="password" placeholder="Passcode"></div>
+    <button id="admin-login-btn" class="abtn" style="width:100%">ACCEDI</button>
+  </div>
+  <div id="admin-actions" class="hidden">
+    <div class="admin-grid">
+      <div class="admin-box">
+        <h3>🎯 In corso <span id="adm-current" style="color:var(--gold);font-weight:800;font-size:12px"></span></h3>
+        <div class="btnrow" style="margin-top:0">
+          <button id="adm-award" class="abtn gold">🏅 Aggiudica a<br><b id="adm-award-name" style="font-size:13px">—</b></button>
+          <button id="adm-nobody" class="abtn ghost">🙅 Svenduto</button>
+        </div>
+        <div class="btnrow">
+          <button id="adm-close" class="abtn red">⏹ Chiudi subito</button>
+          <button id="adm-next" class="abtn blue">▶ Prossimo</button>
+        </div>
+      </div>
+      <div class="admin-box">
+        <h3>⚙️ Impostazioni</h3>
+        <div class="field-row"><label>Rilancio (€)</label><input id="adm-inc" type="number" min="1" step="1"></div>
+        <div class="field-row"><label>Autoscatto (secondi, 0=manuale)</label><input id="adm-auto" type="number" min="0" max="60" step="1"></div>
+        <div class="field-row"><label>Base di default (€)</label><input id="adm-base" type="number" min="0" step="1"></div>
+        <div class="field-row"><label>Prossimo automatico</label><select id="adm-autonext"><option value="1">Sì</option><option value="0">No</option></select></div>
+        <button id="adm-save" class="abtn" style="width:100%">💾 Salva impostazioni</button>
+      </div>
+    </div>
+    <div class="admin-box" style="margin-top:10px">
+      <h3>📝 Lista giocatori — un nome per riga, base opzionale con virgola (es. <i>Vlahovic, 15</i>)</h3>
+      <textarea id="adm-queue" placeholder="es.&#10;Vlahovic, 15&#10;Lautaro&#10;Calhanoglu, 8&#10;…"></textarea>
+      <div class="btnrow">
+        <button id="adm-load" class="abtn blue">📥 Carica lista</button>
+        <button id="adm-reset" class="abtn red">🗑 Reset totale</button>
+      </div>
+    </div>
+    <div class="btnrow" style="justify-content:center">
+      <button id="adm-hide" class="abtn ghost" style="max-width:220px">🔒 Chiudi pannello</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== MODAL NOME (per partecipare) ======== -->
+<div id="name-modal" class="overlay">
+  <div class="modal">
+    <h3>👋 Come ti chiami?</h3>
+    <p>Serve un nome per partecipare all'asta</p>
+    <input id="modal-name" type="text" maxlength="24" placeholder="Il tuo nome…" autocomplete="off">
+    <button id="modal-go" type="button">ENTRA IN ASTA →</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ================== stato client ================== */
+const $ = id => document.getElementById(id);
+const LS = {
+  get token(){ try{return localStorage.getItem('asta_token')||''}catch(e){return ''} },
+  set token(v){ try{ v?localStorage.setItem('asta_token',v):localStorage.removeItem('asta_token') }catch(e){} },
+  get admin(){ try{return localStorage.getItem('asta_admin')||''}catch(e){return ''} },
+  set admin(v){ try{ v?localStorage.setItem('asta_admin',v):localStorage.removeItem('asta_admin') }catch(e){} },
+};
+
+let S = null;          // ultimo stato dal server
+let me = null;         // {name, token} del partecipante loggato
+let lastSeenWinner = null;
+let bidCooldown = 0;   // anti-doppio click client
+let toastTimer = null;
+
+/* ================== util ================== */
+function toast(msg, type){
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'show ' + (type||'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.className='', 2600);
+}
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(v){ return Number(v||0).toLocaleString('it-IT'); }
+
+async function api(url, body){
+  try{
+    const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{})});
+    return await r.json();
+  }catch(e){ return {ok:false, error:'Connessione persa, riprova'}; }
+}
+
+/* ================== SES (sse) ================== */
+function connect(){
+  const es = new EventSource('/events');
+  es.onmessage = ev => { try{ apply(JSON.parse(ev.data)); }catch(e){} };
+  es.onerror = () => { /* EventSource si riconnette da solo */ };
+}
+async function hello(){
+  const token = LS.token;
+  if(!token) return;
+  await api('/api/join', {name:'', token});   // ripristina sessione se il token è ancora valido
+}
+function apply(st){
+  const prevCurrent = S && S.current ? S.current.name : null;
+  S = st;
+  renderAll(prevCurrent);
+}
+
+/* ================== render ================== */
+function renderAll(prevCurrent){
+  const value = S.value, winner = S.winner;
+  const phase = S.phase;
+
+  /* --- pannello punteggio --- */
+  $('value').textContent = fmt(value);
+  $('current-player').innerHTML = S.current
+    ? esc(S.current.name) + '<span class="base">base €' + fmt(S.current.base) + '</span>'
+    : '<span style="opacity:.4">—</span>';
+
+  const label = $('phase-label');
+  if(phase==='finished'){ label.textContent='ASTA CONCLUSSA'; $('live-badge').style.display='none'; }
+  else if(!S.current){ label.textContent='PROSSIMAMENTE'; $('live-badge').style.display='none'; }
+  else { label.textContent = value<=S.current.base ? 'APERTURA — PRIMA OFFERTA' : 'ASTA IN CORSO'; $('live-badge').style.display='inline-block'; }
+
+  const wl = $('winner-line');
+  if(S.current && winner){ wl.innerHTML = '👑 Migliore offerta: <b>'+esc(winner)+'</b>'; wl.classList.add('locked'); }
+  else if(S.current){ wl.innerHTML = 'In attesa della prima offerta…'; wl.classList.remove('locked'); }
+  else if(phase==='finished'){ wl.textContent='Alla prossima stagione!'; wl.classList.remove('locked'); }
+  else { wl.textContent='L\'astatore sta preparando la lista…'; wl.classList.remove('locked'); }
+
+  /* --- bottone gigante --- */
+  const btn = $('bid-btn'), main = $('btn-main'), sub = $('btn-sub');
+  const eligible = me && phase==='auction' && S.current && winner!==me.name;
+  if(!me){
+    btn.disabled = true; main.textContent='PUNTA!'; sub.textContent='inserisci prima il tuo nome';
+  } else if(phase!=='auction' || !S.current){
+    btn.disabled = true; main.textContent='PUNTA!'; sub.textContent = (phase==='finished')?'l\'asta è finita':'in attesa della prossima asta';
+  } else if(winner===me.name){
+    btn.disabled = true; btn.classList.add('done'); main.textContent='SEI IN TESTA! 🏆'; sub.textContent='base €'+fmt(S.current.base)+' · rilancio '+fmt(S.increment);
+  } else {
+    btn.disabled = false; btn.classList.remove('done');
+    const next = value + S.increment;
+    main.textContent = 'PUNTA €' + fmt(next);
+    sub.textContent = 'base €'+fmt(S.current.base)+' · rilancio +€'+fmt(S.increment);
+  }
+
+  /* --- anteprima sotto il bottone --- */
+  const pv = $('bid-preview');
+  if(S.current && me && winner!==me.name){
+    pv.innerHTML = 'Con la tua offerta sali a <b>€'+fmt(value + S.increment)+'</b>';
+  } else if(S.current && winner===me.name){
+    pv.innerHTML = '<span class="base-note">Attendi il timer… qualcuno potrebbe superarti!</span>';
+  } else { pv.innerHTML=''; }
+
+  /* --- lobby / attesa --- */
+  const joined = !!me;
+  $('join-card').style.display = joined ? 'none' : '';
+  $('waiting').style.display = joined ? '' : 'none';
+  $('me-chip').style.display = joined ? 'flex' : 'none';
+  if(joined){ $('me-name').textContent = me.name; $('wait-name').textContent = me.name; }
+
+  /* --- final --- */
+  $('final').classList.toggle('hidden', phase!=='finished');
+  $('bid-btn').style.display = phase==='finished' ? 'none':'';
+  $('bid-preview').style.display = phase==='finished' ? 'none':'';
+  if(phase==='finished'){
+    const sorted = [...S.participants].sort((a,b)=>b.spent-a.spent);
+    $('ranking').innerHTML = sorted.length ? sorted.map((p,i)=>(
+      '<div class="rrow'+(i<3?' podium':'')+'">'+
+      '<span class="medal">'+(['🥇','🥈','🥉'][i]||'🎽')+'</span>'+
+      '<span class="rname">'+esc(p.name)+'</span>'+
+      '<span class="rum">'+fmt(p.roster?Object.keys(p.roster).length:0)+' gioc.</span>'+
+      '<span class="rspent">€'+fmt(p.spent)+'</span></div>'
+    )).join('') : '<span class="empty-note">Nessun partecipante…</span>';
+  }
+
+  /* --- partecipanti --- */
+  const parts = [...S.participants];
+  $('pcount').textContent = parts.length;
+  $('participants').innerHTML = parts.length ? parts.map(p=>(
+    '<span class="pchip'+(S.winner===p.name?' leader':'')+'">'+esc(p.name)+
+    (p.roster && Object.keys(p.roster).length ? ' <span class="spent">€'+fmt(p.spent)+' · '+Object.keys(p.roster).length+'</span>':'') +
+    '</span>'
+  )).join('') : '<span class="empty-note">Ancora nessuno…</span>';
+
+  /* --- lista asta --- */
+  const q = S.queue || [];
+  $('qcount').textContent = q.length + (S.current?1:0);
+  let rows = [];
+  if(S.current){
+    rows.push('<div class="qrow playing"><span class="idx">▶</span><span class="qname">'+esc(S.current.name)+'</span><span class="qbase">base €'+fmt(S.current.base)+'</span><span class="mark">IN ASTA</span></div>');
+  }
+  const soldSet = {};
+  (S.history||[]).forEach(h=>soldSet[h.player]=h);
+  q.forEach((p,i)=>rows.push(
+    '<div class="qrow'+(soldSet[p.name]?' sold':'')+'"><span class="idx">'+(i+1)+'</span>'+
+    '<span class="qname">'+esc(p.name)+'</span><span class="qbase">base €'+fmt(p.base)+'</span>'+
+    (soldSet[p.name]?'<span class="mark">✓</span>':'')+'</div>'
+  ));
+  $('queue-list').innerHTML = rows.length ? rows.join('') : '<span class="empty-note">La lista dei giocatori comparirà qui.</span>';
+
+  /* --- storico --- */
+  const h = [...(S.history||[])].reverse();
+  $('history').innerHTML = h.length ? h.map(x=>(
+    '<div class="hrow"><span class="hname">'+esc(x.player)+'</span>'+
+    '<span class="hwho">'+(x.winner?esc(x.winner):'svenduto')+'</span>'+
+    '<span class="hprice">€'+fmt(x.value)+'</span></div>'
+  )).join('') : '<span class="empty-note">Nessun giocatore ancora assegnato.</span>';
+
+  /* --- admin --- */
+  renderAdmin();
+}
+
+/* ================== countdown ================== */
+setInterval(()=>{
+  const fill = $('countdown-fill');
+  if(!S || !S.current || !S.autoClose || !S.lastBidAt){ fill.style.width='100%'; fill.style.background='linear-gradient(90deg,var(--gold),var(--red))'; return; }
+  const total = S.autoClose*1000;
+  const left = Math.max(0, S.lastBidAt + total - Date.now());
+  fill.style.width = (left/total*100)+'%';
+  fill.style.background = left<1500 ? 'var(--red)' : 'linear-gradient(90deg,var(--gold),var(--red))';
+}, 120);
+
+/* ================== azioni utente ================== */
+async function doJoin(name){
+  const r = await api('/api/join', {name});
+  if(!r.ok){ toast(r.error || 'Errore', 'err'); return null; }
+  me = {name:r.name, token:r.token};
+  LS.token = r.token;
+  return me;
+}
+
+$('join-btn').onclick = async ()=>{
+  const name = $('join-name').value.trim();
+  if(!name){ toast('Inserisci il tuo nome 😉','err'); $('join-name').focus(); return; }
+  $('join-btn').disabled = true; $('join-btn').textContent='Attendi…';
+  const ok = await doJoin(name);
+  $('join-btn').disabled = false; $('join-btn').textContent='ENTRA IN ASTA →';
+  if(ok) toast('Benvenuto '+ok.name+'! 🎉','win');
+};
+$('join-name').addEventListener('keydown', e=>{ if(e.key==='Enter') $('join-btn').click(); });
+
+let lastClick = 0;
+$('bid-btn').onclick = async ()=>{
+  if(!me) { openNameModal(); return; }
+  if(Date.now() - lastClick < 350) return;   // protezione doppio click
+  const r = await api('/api/bid', {token: me.token});
+  if(r.ok){
+    lastClick = Date.now();
+    toast('€'+fmt(r.value)+' — sei in testa! 🔥','win');
+    boost();
+  } else {
+    toast(r.error || 'Offerta non valida','err');
+  }
+};
+
+function boost(){
+  const btn = $('bid-btn');
+  btn.style.animation='none'; void btn.offsetWidth;
+  btn.style.animation='boost .35s ease';
+}
+const stEl = document.createElement('style');
+stEl.textContent = '@keyframes boost{0%{transform:scale(1)}35%{transform:scale(1.06)}100%{transform:scale(1)}}';
+document.head.appendChild(stEl);
+
+/* ================== modal nome ================== */
+function openNameModal(){ $('name-modal').classList.add('show'); setTimeout(()=>$('modal-name').focus(),60); }
+function closeNameModal(){ $('name-modal').classList.remove('show'); }
+$('name-modal').addEventListener('click', e=>{ if(e.target===$('name-modal')) closeNameModal(); });
+$('modal-name').addEventListener('keydown', e=>{ if(e.key==='Enter') $('modal-go').click(); });
+$('modal-go').onclick = async ()=>{
+  const name = $('modal-name').value.trim();
+  if(!name){ toast('Inserisci un nome','err'); return; }
+  $('modal-go').disabled = true;
+  const ok = await doJoin(name);
+  $('modal-go').disabled = false;
+  if(ok){ closeNameModal(); toast('Benvenuto '+ok.name+'! 🎉','win'); }
+};
+
+/* quando l'asta è chiusa e la lobby è piena di gente, offri la partecipazione */
+$('auction-panel').addEventListener('click', ()=>{
+  if(!me && S && (S.phase==='auction')) openNameModal();
+});
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space' && !me && S && S.phase==='auction'){ e.preventDefault(); openNameModal(); }
+});
+
+/* ================== admin ================== */
+function renderAdmin(){
+  if(!S) return;
+  $('adm-current').textContent = S.current ? S.current.name : '—';
+  $('adm-award-name').textContent = S.winner ? S.winner : 'nessuno';
+  $('adm-inc').value = S.increment;
+  $('adm-auto').value = S.autoClose;
+  $('adm-base').value = S.baseDefault;
+  $('adm-autonext').value = S.autoNext ? '1' : '0';
+  $('adm-award').disabled = !S.current;
+  $('adm-nobody').disabled = !S.current;
+  $('adm-close').disabled = !S.current;
+  $('adm-next').disabled = !!S.current || !S.queue.length;
+}
+function adm(payload){ return api('/api/admin', Object.assign({adminToken: LS.admin}, payload)); }
+
+$('btn-admin').onclick = ()=>{
+  const panel = $('admin-panel');
+  const logged = !!LS.admin;
+  if(panel.classList.contains('hidden')){
+    panel.classList.remove('hidden');
+    $('admin-login').style.display = logged ? 'none' : '';
+    $('admin-actions').classList.toggle('hidden', !logged);
+    $('btn-admin').classList.add('active'); $('btn-admin').textContent='🔧 Chiudi pannello';
+    if(LS.admin) loadQueueIntoAdmin();
+  } else {
+    panel.classList.add('hidden');
+    $('btn-admin').classList.remove('active'); $('btn-admin').textContent='🔧 Astatore';
+  }
+};
+$('admin-login-btn').onclick = async ()=>{
+  const r = await api('/api/admin/login', {passcode: $('admin-pass').value});
+  if(r.ok){
+    LS.admin = r.adminToken;
+    $('admin-login').style.display='none';
+    $('admin-actions').classList.remove('hidden');
+    toast('Pannello astatore attivo 🛠','win');
+    loadQueueIntoAdmin();
+  } else toast(r.error||'Passcode errato','err');
+};
+
+function escapeNewlines(t){ return t.replace(/\\n/g,'\n'); }
+function loadQueueIntoAdmin(){
+  const q = S.queue || [];
+  const cur = S.current?[{name:S.current.name, base:S.current.base}]:[];
+  const txt = [...cur, ...q].map(p => p.base!=null && p.base!==S.baseDefault ? p.name+', '+p.base : p.name).join('\n');
+  $('adm-queue').value = txt;
+}
+$('adm-queue').addEventListener('input', e=>{ e.target.value = escapeNewlines(e.target.value); });
+
+$('adm-load').onclick = async ()=>{
+  const list = $('adm-queue').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+    const m = l.match(/^(.+?),(?:\s*)(\d+(?:[.,]\d+)?)?$/);
+    if(m) return {name: m[1].trim(), base: parseFloat(m[2].replace(',', '.'))};
+    const n = l.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)$/);
+    if(n) return {name: n[1].trim(), base: parseFloat(n[2].replace(',', '.'))};
+    return {name: l};
+  });
+  const r = await adm({action:'queue', payload:{list}});
+  if(r.ok){
+    toast('Lista caricata: '+r.count+' giocatori 📋','win');
+    if(!S.current){ const n = await adm({action:'startNext'}); if(n.ok) toast('Via! Prima asta aperta ▶','win'); }
+  } else toast(r.error||'Errore','err');
+};
+$('adm-next').onclick = async ()=>{ const r = await adm({action:'startNext'}); if(!r.ok) toast(r.error||'Errore','err'); else toast('Nuova asta aperta ▶','win'); };
+$('adm-award').onclick = async ()=>{ const r = await adm({action:'award'}); if(!r.ok) toast(r.error||'Errore','err'); else toast('Aggiudicato! 🏅','win'); };
+$('adm-nobody').onclick = async ()=>{ await adm({action:'award', payload:{none:true}}); };
+$('adm-close').onclick = async ()=>{ await adm({action:'award'}); };
+$('adm-save').onclick = async ()=>{
+  const r = await adm({action:'settings', payload:{
+    increment: Number($('adm-inc').value)||1,
+    autoClose: Number($('adm-auto').value),
+    baseDefault: Number($('adm-base').value)||0,
+    autoNext: $('adm-autonext').value==='1',
+  }});
+  toast(r.ok ? 'Impostazioni salvate 💾' : (r.error||'Errore'), r.ok?'win':'err');
+};
+$('adm-reset').onclick = async ()=>{
+  if(!confirm('⚠️ Reset TOTALE: azzera tutto (partecipanti, lista, storico). Confermi?')) return;
+  const r = await adm({action:'reset'});
+  if(r.ok) toast('Asta azzerata 🗑','win');
+};
+
+/* ================== avvio ================== */
+(async function init(){
+  renderAll(null);
+  connect();
+  await hello();     // ripristina la sessione se il token esiste ancora
+})();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3769d9a3cfcedb0',t:'MTc4ODc5MzU2OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
