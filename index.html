@@ -1008,6 +1008,53 @@
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+
+  /* ---- Banner stato connessione (server non raggiungibile / riconnessione) ---- */
+  #conn-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 400;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+    background: #2b0d0d;
+    border-bottom: 1.5px solid rgba(239, 68, 68, 0.7);
+    color: #fecaca;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  }
+  #conn-banner.show { display: flex; }
+  #conn-banner.warn {
+    background: #2b2107;
+    border-bottom-color: rgba(251, 191, 36, 0.7);
+    color: #fde68a;
+  }
+  #conn-banner.ok {
+    background: #0c2b19;
+    border-bottom-color: rgba(34, 197, 94, 0.7);
+    color: #86efac;
+  }
+  #conn-banner .spin {
+    display: inline-block;
+    animation: conn-spin 1s linear infinite;
+  }
+  @keyframes conn-spin { to { transform: rotate(360deg); } }
+  #conn-retry-btn {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: inherit;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
   #toast.err {
     border-color: rgba(239, 68, 68, 0.8);
     background: #240c0c;
@@ -1033,6 +1080,13 @@
 </style>
 </head>
 <body>
+
+<!-- Banner stato connessione: avvisa quando il server non risponde e offre un retry -->
+<div id="conn-banner" role="status" aria-live="polite">
+  <span class="spin">🔄</span>
+  <span id="conn-banner-text">Connessione al server persa…</span>
+  <button id="conn-retry-btn" type="button">Riprova ora</button>
+</div>
 
 <!-- Sfondo campo da calcio SVG -->
 <svg class="pitch-bg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -1400,6 +1454,8 @@ const $ = id => document.getElementById(id);
 const LS = {
   get token() { try { return localStorage.getItem('asta_user_token') || ''; } catch (e) { return ''; } },
   set token(v) { try { v ? localStorage.setItem('asta_user_token', v) : localStorage.removeItem('asta_user_token'); } catch (e) {} },
+  get name() { try { return localStorage.getItem('asta_user_name') || ''; } catch (e) { return ''; } },
+  set name(v) { try { v ? localStorage.setItem('asta_user_name', v) : localStorage.removeItem('asta_user_name'); } catch (e) {} },
   get admin() { try { return localStorage.getItem('asta_admin_token') || ''; } catch (e) { return ''; } },
   set admin(v) { try { v ? localStorage.setItem('asta_admin_token', v) : localStorage.removeItem('asta_admin_token'); } catch (e) {} },
   get sound() { try { return localStorage.getItem('asta_sound') !== '0'; } catch (e) { return true; } },
@@ -1457,55 +1513,244 @@ function fmt(n) {
   return Number(n || 0).toLocaleString('it-IT');
 }
 
-async function api(url, body = {}) {
+/* ==================== LIVELLO DI RETE ROBUSTO ====================
+   Prima QUALSIASI problema (server che si riavvia, istanza free in standby,
+   pagina di errore 502/503 del proxy, risposta non JSON) veniva mostrato come
+   "Connessione al server persa" senza nessun tentativo di recupero.
+   Ora: timeout, retry con backoff, messaggi distinti e banner di stato. */
+const NET = {
+  online: true,          // ultima chiamata andata a buon fine
+  attempts: 0,
+  bannerTimer: null,
+};
+
+function setConnection(state, text) {
+  const banner = $('conn-banner');
+  const label = $('conn-banner-text');
+  if (!banner) return;
+  clearTimeout(NET.bannerTimer);
+  if (state === 'ok') {
+    if (!NET.online) {           // mostra un breve "riconnesso" solo se era caduto
+      banner.className = 'show ok';
+      label.textContent = text || '✅ Connessione ripristinata';
+      NET.bannerTimer = setTimeout(() => { banner.className = ''; }, 2200);
+    } else {
+      banner.className = '';
+    }
+    NET.online = true;
+    NET.attempts = 0;
+    return;
+  }
+  NET.online = false;
+  banner.className = 'show' + (state === 'warn' ? ' warn' : '');
+  label.textContent = text || 'Connessione al server persa';
+}
+
+function netErrorResult(status, detail) {
+  const map = {
+    0: 'Server non raggiungibile: controlla la connessione (se il sito è in standby può servire qualche secondo)',
+    401: 'Sessione scaduta: effettua di nuovo l\'accesso',
+    404: 'Servizio non trovato sul server',
+    413: 'Richiesta troppo grande',
+    500: 'Errore interno del server',
+    502: 'Il server sta ripartendo: riprova tra qualche secondo',
+    503: 'Il server è in standby: riprova tra qualche secondo',
+    504: 'Il server ha impiegato troppo a rispondere: riprova',
+  };
+  return {
+    ok: false,
+    networkError: status === 0,
+    needLogin: status === 401,
+    status,
+    error: map[status] || ('Errore del server (HTTP ' + status + ')' + (detail ? ': ' + detail : '')),
+  };
+}
+
+async function fetchJson(url, options, timeoutMs) {
+  const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return await res.json();
+    const res = await fetch(url, ctrl ? Object.assign({ signal: ctrl.signal }, options) : options);
+    const text = await res.text();
+    let json = null;
+    try { json = text ? JSON.parse(text) : {}; } catch (e) { /* HTML di errore del proxy */ }
+    if (json && typeof json === 'object') {
+      json.status = json.status || res.status;
+      if (!res.ok && json.ok === undefined) json.ok = false;
+      return json;
+    }
+    // Risposta non JSON: tipicamente la pagina di errore del proxy o un captive portal
+    return netErrorResult(res.status, (text || '').replace(/<[^>]+>/g, ' ').trim().slice(0, 90));
   } catch (e) {
-    return { ok: false, error: 'Connessione al server persa' };
+    return netErrorResult(0, e && e.name === 'AbortError' ? 'timeout' : '');
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
-function admApi(action, payload = {}) {
-  return api('/api/admin', {
-    adminToken: LS.admin,
-    action,
-    payload
-  });
+async function api(url, body = {}, opts = {}) {
+  const maxTries = opts.tries === undefined ? 3 : opts.tries;      // 1° tentativo + retry
+  const timeoutMs = opts.timeout || 25000;                           // copre il cold start di Render
+  let last = null;
+  for (let i = 0; i < maxTries; i++) {
+    last = await fetchJson(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    }, timeoutMs);
+
+    const reachable = last && !last.networkError;
+    if (reachable) {
+      setConnection('ok');
+      return last;
+    }
+    // Server irraggiungibile: avvisa e ritenta con attesa crescente
+    setConnection('err', i === 0
+      ? '⚠️ Connessione al server persa — nuovo tentativo in corso…'
+      : '⚠️ Server ancora non raggiungibile — tentativo ' + (i + 1) + ' di ' + maxTries + '…');
+    if (i < maxTries - 1) await new Promise(r => setTimeout(r, 900 * Math.pow(2, i)));
+  }
+  return last || netErrorResult(0);
+}
+
+async function admApi(action, payload = {}) {
+  const res = await api('/api/admin', { adminToken: LS.admin, action, payload });
+  // Sessione astatore non più valida (riavvio del server, nuovo deploy, reset):
+  // prima il pannello restava aperto e i pulsanti fallivano in silenzio.
+  if (res && (res.status === 401 || res.needLogin)) {
+    const wasLogged = !!LS.admin;
+    LS.admin = '';
+    if (wasLogged) {
+      toast('🔑 Sessione astatore scaduta: reinserisci la passcode', 'err');
+      openAdminPanel();
+    }
+    res.needLogin = true;
+    if (typeof renderAll === 'function' && S) renderAll();
+  }
+  return res;
 }
 
 /* ==================== REALTIME SSE CONNECTION ==================== */
+let es = null;
+let lastEventAt = 0;
+let sseWatchdog = null;
+let reconnecting = false;
+
 function connectSSE() {
-  const es = new EventSource('/events');
+  if (es) { try { es.close(); } catch (e) {} }
+  es = new EventSource('/events');
+  es.onopen = () => {
+    lastEventAt = Date.now();
+    if (reconnecting) {
+      reconnecting = false;
+      setConnection('ok', '✅ Connessione ripristinata');
+      resyncAll();       // lo stato potrebbe essere cambiato mentre eravamo scollegati
+    }
+  };
   es.onmessage = ev => {
+    lastEventAt = Date.now();
     try {
       const data = JSON.parse(ev.data);
       if (data && data.serverNow) {
         clientTimeOffset = data.serverNow - Date.now();
       }
+      if (NET.online === false) setConnection('ok', '✅ Connessione ripristinata');
+      NET.online = true;
       applyState(data);
     } catch (e) {
       console.error('Errore parsing SSE:', e);
     }
   };
   es.onerror = () => {
-    // Riconnessione automatica gestita nativamente dal browser
+    // Il browser ritenta da solo, ma su proxy/mobile il flusso può restare
+    // "appeso": mostriamo l'avviso e forziamo la riconnessione se necessario.
+    if (!reconnecting) {
+      reconnecting = true;
+      setConnection('warn', '🔄 Connessione interrotta: riconnessione in corso…');
+    }
   };
+
+  // Watchdog: se non arriva nulla per 45s (stream morto ma socket aperto)
+  // ricostruiamo la connessione e ricarichiamo lo stato via HTTP.
+  if (sseWatchdog) clearInterval(sseWatchdog);
+  sseWatchdog = setInterval(() => {
+    if (!lastEventAt) return;
+    if (Date.now() - lastEventAt > 45000) {
+      lastEventAt = Date.now();
+      setConnection('warn', '🔄 Aggiornamento della connessione…');
+      try { connectSSE(); } catch (e) {}
+      resyncAll();
+    }
+  }, 10000);
 }
 
-async function restoreUserSession() {
+/* Ricarica lo stato e valida le sessioni dopo una riconnessione */
+async function resyncAll() {
+  const st = await fetchJson('/api/state', { method: 'GET' }, 15000);
+  if (st && st.phase !== undefined) {
+    if (st.serverNow) clientTimeOffset = st.serverNow - Date.now();
+    NET.online = true;
+    setConnection('ok');
+    applyState(st);
+  } else {
+    setConnection('err', '⚠️ Server non raggiungibile: nuovo tentativo tra pochi secondi');
+  }
+  await restoreUserSession(true);
+  await validateAdminSession();
+}
+
+/* Il piano free di Render manda l'istanza in standby dopo ~15 minuti:
+   un ping periodico la tiene sveglia durante l'asta. */
+function startKeepAlive() {
+  setInterval(async () => {
+    if (document.hidden) return;
+    const r = await fetchJson('/api/ping', { method: 'GET' }, 15000);
+    if (r && r.ok) {
+      NET.online = true;
+      if (Date.now() - lastEventAt > 45000) resyncAll();
+    } else {
+      setConnection('err', '⚠️ Server non raggiungibile (in standby?): riattivazione in corso…');
+    }
+  }, 60000);
+
+  // Al ritorno sulla scheda (tipico da telefono) risincronizziamo subito
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      lastEventAt = Date.now();
+      resyncAll();
+    }
+  });
+  window.addEventListener('online', () => resyncAll());
+}
+
+async function restoreUserSession(silent) {
   const token = LS.token;
-  if (!token) return;
-  const res = await api('/api/join', { name: '', token });
-  if (res.ok) {
+  const savedName = LS.name;
+  if (!token && !savedName) return;
+  // Se il server ha perso lo stato (crash/redeploy) il token non basta più:
+  // rimandiamo anche il nome, così l'utente rientra senza doverlo riscrivere.
+  const res = await api('/api/join', { name: savedName || '', token: token || '' }, { tries: 2 });
+  if (res && res.ok) {
     me = { name: res.name, token: res.token };
+    LS.token = res.token;
+    LS.name = res.name;
   } else {
     LS.token = '';
+    if (!silent && res && res.error && !res.networkError) toast(res.error, 'err');
   }
+}
+
+/* Verifica che la passcode memorizzata nel browser sia ancora accettata */
+async function validateAdminSession() {
+  if (!LS.admin) return false;
+  const res = await api('/api/admin', { adminToken: LS.admin, action: 'ping' }, { tries: 2 });
+  if (res && res.ok) return true;
+  if (res && (res.status === 401 || res.needLogin)) {
+    LS.admin = '';
+    toast('🔑 Sessione astatore scaduta: reinserisci la passcode', 'err');
+    if (S) renderAll();
+  }
+  return false;
 }
 
 function applyState(newState) {
@@ -1753,11 +1998,22 @@ function renderAdminView() {
     $('adm-win-name').textContent = '—';
   }
 
-  $('btn-adm-save-player').disabled = !current;
-  $('btn-adm-award').disabled = !current;
-  $('btn-adm-unsold').disabled = !current;
-  $('btn-adm-close-now').disabled = !current;
-  $('btn-adm-next-queue').disabled = !!current || !(S.queue && S.queue.length);
+  // Pulsanti disabilitati: spieghiamo SEMPRE il motivo con un tooltip,
+  // così un tasto grigio non sembra più "rotto".
+  const noCurrent = 'Nessun giocatore in asta al momento';
+  const setBtn = (id, disabled, title) => {
+    const b = $(id);
+    if (!b) return;
+    b.disabled = disabled;
+    b.title = title || '';
+  };
+  setBtn('btn-adm-save-player', !current, current ? '' : noCurrent);
+  setBtn('btn-adm-award', !current, current ? 'Aggiudica il giocatore al miglior offerente' : noCurrent);
+  setBtn('btn-adm-unsold', !current, current ? 'Chiudi l\'asta senza assegnare il giocatore' : noCurrent);
+  setBtn('btn-adm-close-now', !current, current ? 'Chiudi subito l\'asta' : noCurrent);
+  setBtn('btn-adm-next-queue', !!current || !(S.queue && S.queue.length),
+    current ? 'Prima chiudi/aggiudica il giocatore in asta'
+            : (!(S.queue && S.queue.length) ? 'Lista vuota: aggiungi giocatori alla lista' : 'Avvia il prossimo giocatore in lista'));
 
   // Aggiorna etichetta tasto pausa pannello
   const pBtn = $('btn-timer-pause');
@@ -1879,12 +2135,13 @@ requestAnimationFrame(updateTimerLoop);
 /* ==================== AZIONI PARTECIPANTE ==================== */
 async function joinAuction(name) {
   const res = await api('/api/join', { name });
-  if (!res.ok) {
-    toast(res.error || 'Errore durante l\'accesso', 'err');
+  if (!res || !res.ok) {
+    toast((res && res.error) || 'Errore durante l\'accesso', 'err');
     return false;
   }
   me = { name: res.name, token: res.token };
   LS.token = res.token;
+  LS.name = res.name;
   toast('Benvenuto in sala, ' + res.name + '! 🎉', 'win');
   return true;
 }
@@ -1992,25 +2249,55 @@ $('modal-roster-overlay').addEventListener('click', e => {
 });
 
 /* ==================== AZIONI ASTATORE (ADMIN) ==================== */
-$('btn-admin-toggle').onclick = () => {
+function openAdminPanel() {
   const panel = $('admin-panel');
-  if (panel.classList.contains('hidden')) {
-    panel.classList.remove('hidden');
-    $('admin-passcode-input').focus();
-  } else {
-    panel.classList.add('hidden');
+  panel.classList.remove('hidden');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  setTimeout(() => { const i = $('admin-passcode-input'); if (i && !LS.admin) i.focus(); }, 250);
+}
+function toggleAdminPanel() {
+  const panel = $('admin-panel');
+  if (panel.classList.contains('hidden')) openAdminPanel();
+  else panel.classList.add('hidden');
+}
+$('btn-admin-toggle').onclick = toggleAdminPanel;
+
+/* Feedback uniforme per le azioni dell'astatore: nessun pulsante può più
+   "non andare" in silenzio. */
+async function runAdminAction(btn, fn, okMsg) {
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fn();
+    if (res && res.ok) {
+      if (okMsg) toast(okMsg, 'win');
+    } else if (res && res.needLogin) {
+      // già gestito in admApi (toast + pannello passcode riaperto)
+    } else {
+      toast((res && res.error) || 'Operazione non riuscita: il server non ha risposto', 'err');
+    }
+    return res;
+  } catch (e) {
+    console.error('Errore azione astatore:', e);
+    toast('Errore imprevisto: ' + (e && e.message ? e.message : e), 'err');
+    return null;
+  } finally {
+    // riabilita il pulsante: renderAll gestisce solo alcuni stati "disabled"
+    if (btn) btn.disabled = false;
+    if (S) renderAll();
   }
-};
+}
 
 $('btn-admin-login').onclick = async () => {
   const pass = $('admin-passcode-input').value.trim();
+  if (!pass) { toast('Inserisci la passcode', 'err'); return; }
   const res = await api('/api/admin/login', { passcode: pass });
-  if (res.ok) {
+  if (res && res.ok) {
     LS.admin = res.adminToken;
-    toast('Accesso Astatore confermato! 🛠️', 'win');
+    $('admin-passcode-input').value = '';
+    toast('Accesso Astatore confermato! 🛠️ (la sessione ora resta attiva anche se il server si riavvia)', 'win');
     renderAll();
   } else {
-    toast(res.error || 'Passcode non valida', 'err');
+    toast((res && res.error) || 'Passcode non valida', 'err');
   }
 };
 
@@ -2021,89 +2308,72 @@ $('btn-adm-logout').onclick = () => {
 };
 
 // Funzione unificata per toggle Pausa / Riprendi
-async function togglePause() {
+async function togglePause(btn) {
   const isPaused = S ? S.isPaused : false;
-  const res = await admApi('adjustTimer', { pause: !isPaused });
-  if (res.ok) {
-    toast(!isPaused ? '⏸️ Asta messa in pausa! Timer congelato.' : '▶️ Asta ripresa! Countdown attivo.', 'win');
-  } else {
-    toast(res.error || 'Errore durante la pausa', 'err');
-  }
+  return runAdminAction(btn, () => admApi('adjustTimer', { pause: !isPaused }),
+    !isPaused ? '⏸️ Asta messa in pausa! Timer congelato.' : '▶️ Asta ripresa! Countdown attivo.');
 }
 
 // Handler Pausa Rapida in Primo Piano e nel Pannello
-$('btn-quick-pause').onclick = togglePause;
-$('btn-timer-pause').onclick = togglePause;
+$('btn-quick-pause').onclick = e => togglePause(e.currentTarget);
+$('btn-timer-pause').onclick = e => togglePause(e.currentTarget);
 
 // Handler Tasti Rapidi Aggiungi Tempo & Riavvia
-$('btn-quick-add5').onclick = async () => { await admApi('adjustTimer', { addSeconds: 5 }); toast('+5 secondi aggiunti ➕'); };
-$('btn-quick-add10').onclick = async () => { await admApi('adjustTimer', { addSeconds: 10 }); toast('+10 secondi aggiunti ➕'); };
-$('btn-quick-restart').onclick = async () => { await admApi('adjustTimer', { restart: true }); toast('Timer riavviato 🔄', 'win'); };
+$('btn-quick-add5').onclick = e => runAdminAction(e.currentTarget, () => admApi('adjustTimer', { addSeconds: 5 }), '+5 secondi aggiunti ➕');
+$('btn-quick-add10').onclick = e => runAdminAction(e.currentTarget, () => admApi('adjustTimer', { addSeconds: 10 }), '+10 secondi aggiunti ➕');
+$('btn-quick-restart').onclick = e => runAdminAction(e.currentTarget, () => admApi('adjustTimer', { restart: true }), 'Timer riavviato 🔄');
 
-$('btn-timer-restart').onclick = async () => { await admApi('adjustTimer', { restart: true }); toast('Timer riavviato 🔄', 'win'); };
-$('btn-timer-add5').onclick = async () => { await admApi('adjustTimer', { addSeconds: 5 }); toast('+5 secondi aggiunti ➕'); };
-$('btn-timer-add10').onclick = async () => { await admApi('adjustTimer', { addSeconds: 10 }); toast('+10 secondi aggiunti ➕'); };
-$('btn-timer-sub5').onclick = async () => { await admApi('adjustTimer', { addSeconds: -5 }); toast('-5 secondi rimossi ➖'); };
+$('btn-timer-restart').onclick = e => runAdminAction(e.currentTarget, () => admApi('adjustTimer', { restart: true }), 'Timer riavviato 🔄');
+$('btn-timer-add5').onclick = e => runAdminAction(e.currentTarget, () => admApi('adjustTimer', { addSeconds: 5 }), '+5 secondi aggiunti ➕');
+$('btn-timer-add10').onclick = e => runAdminAction(e.currentTarget, () => admApi('adjustTimer', { addSeconds: 10 }), '+10 secondi aggiunti ➕');
+$('btn-timer-sub5').onclick = e => runAdminAction(e.currentTarget, () => admApi('adjustTimer', { addSeconds: -5 }), '-5 secondi rimossi ➖');
 
 // 1. Salva Modifiche Giocatore Corrente
-$('btn-adm-save-player').onclick = async () => {
+$('btn-adm-save-player').onclick = e => {
   const name = $('adm-edit-name').value.trim();
   const base = Number($('adm-edit-base').value);
   const value = Number($('adm-edit-val').value);
   const winner = $('adm-edit-winner').value.trim();
   if (!name) { toast('Inserisci il nome del giocatore', 'err'); return; }
-
-  const res = await admApi('editCurrent', { name, base, value, winner });
-  if (res.ok) toast('Giocatore aggiornato in tempo reale! ✏️', 'win');
-  else toast(res.error || 'Errore', 'err');
+  runAdminAction(e.currentTarget, () => admApi('editCurrent', { name, base, value, winner }), 'Giocatore aggiornato in tempo reale! ✏️');
 };
 
 // 2. Azioni Aggiudicazione / Chiusura
-$('btn-adm-award').onclick = async () => {
-  const res = await admApi('award');
-  if (res.ok) toast('Giocatore aggiudicato! 🏅', 'win');
-  else toast(res.error || 'Errore', 'err');
-};
-$('btn-adm-unsold').onclick = async () => {
-  const res = await admApi('award', { none: true });
-  if (res.ok) toast('Giocatore svenduto / non assegnato', 'win');
-};
-$('btn-adm-close-now').onclick = async () => {
-  const res = await admApi('award');
-  if (res.ok) toast('Asta chiusa subito', 'win');
-};
-$('btn-adm-next-queue').onclick = async () => {
-  const res = await admApi('startNext');
-  if (res.ok) toast('Nuovo giocatore in asta! ▶', 'win');
-  else toast(res.error || 'Errore', 'err');
-};
+$('btn-adm-award').onclick = e => runAdminAction(e.currentTarget, () => admApi('award'), 'Giocatore aggiudicato! 🏅');
+$('btn-adm-unsold').onclick = e => runAdminAction(e.currentTarget, () => admApi('award', { none: true }), 'Giocatore svenduto / non assegnato');
+$('btn-adm-close-now').onclick = e => runAdminAction(e.currentTarget, () => admApi('award'), 'Asta chiusa subito');
+$('btn-adm-next-queue').onclick = e => runAdminAction(e.currentTarget, () => admApi('startNext'), 'Nuovo giocatore in asta! ▶');
 
 // 3. Lancia Giocatore Rapido
-$('btn-adm-quick-start').onclick = async () => {
+$('btn-adm-quick-start').onclick = e => {
   const name = $('adm-quick-name').value.trim();
   const base = Number($('adm-quick-base').value) || 1;
   if (!name) { toast('Inserisci il nome del giocatore', 'err'); return; }
-
-  const res = await admApi('startCustom', { name, base });
-  if (res.ok) {
-    toast(`Asta aperta per ${name}! 🚀`, 'win');
-    $('adm-quick-name').value = '';
-  } else toast(res.error || 'Errore', 'err');
+  runAdminAction(e.currentTarget, async () => {
+    const res = await admApi('startCustom', { name, base });
+    if (res && res.ok) {
+      $('adm-quick-name').value = '';
+      toast(`Asta aperta per ${name}! 🚀`, 'win');
+    }
+    return res;
+  });
 };
-$('btn-adm-quick-add-queue').onclick = async () => {
+$('btn-adm-quick-add-queue').onclick = e => {
   const name = $('adm-quick-name').value.trim();
   const base = Number($('adm-quick-base').value) || 1;
   if (!name) { toast('Inserisci il nome del giocatore', 'err'); return; }
-
-  const res = await admApi('queueAdd', { name, base });
-  if (res.ok) {
-    toast(`Aggiunto ${name} in fondo alla lista! 📋`, 'win');
-    $('adm-quick-name').value = '';
-  } else toast(res.error || 'Errore', 'err');
+  runAdminAction(e.currentTarget, async () => {
+    const res = await admApi('queueAdd', { name, base });
+    if (res && res.ok) {
+      $('adm-quick-name').value = '';
+      toast(`Aggiunto ${name} in fondo alla lista! 📋`, 'win');
+    }
+    return res;
+  });
 };
 
 // 4. Salva Impostazioni
-$('btn-adm-save-settings').onclick = async () => {
+$('btn-adm-save-settings').onclick = e => {
   const payload = {
     timerDuration: Number($('adm-cfg-timer').value),
     extendThreshold: Number($('adm-cfg-threshold').value),
@@ -2117,15 +2387,18 @@ $('btn-adm-save-settings').onclick = async () => {
   const newPass = $('adm-cfg-passcode').value.trim();
   if (newPass) payload.passcode = newPass;
 
-  const res = await admApi('settings', payload);
-  if (res.ok) {
-    toast('Impostazioni salvate con successo! 💾', 'win');
-    $('adm-cfg-passcode').value = '';
-  } else toast(res.error || 'Errore nel salvataggio', 'err');
+  runAdminAction(e.currentTarget, async () => {
+    const res = await admApi('settings', payload);
+    if (res && res.ok) {
+      $('adm-cfg-passcode').value = '';
+      toast('Impostazioni salvate con successo! 💾', 'win');
+    }
+    return res;
+  });
 };
 
 // 5. Carica Lista Massiva
-$('btn-adm-load-queue').onclick = async () => {
+$('btn-adm-load-queue').onclick = e => {
   const lines = $('adm-queue-textarea').value.split('\n').map(l => l.trim()).filter(Boolean);
   const defaultBase = (S && S.setting) ? S.setting.baseDefault : 1;
   const list = lines.map(line => {
@@ -2136,41 +2409,53 @@ $('btn-adm-load-queue').onclick = async () => {
     return { name: line, base: defaultBase };
   });
 
-  const res = await admApi('queue', { list });
-  if (res.ok) {
-    toast(`Lista caricata: ${res.count} giocatori! 📋`, 'win');
-  } else toast(res.error || 'Errore nel caricamento', 'err');
+  if (!list.length) { toast('Incolla almeno un giocatore', 'err'); return; }
+  runAdminAction(e.currentTarget, async () => {
+    const res = await admApi('queue', { list });
+    if (res && res.ok) toast(`Lista caricata: ${res.count} giocatori! 📋`, 'win');
+    return res;
+  }, null);
 };
 
 // Funzioni helper gestione interattiva coda admin
+// (prima un errore qui passava del tutto inosservato: pulsanti "morti")
 window.admStartSpecific = async (idx) => {
   const res = await admApi('queueStart', { index: idx });
-  if (res.ok) toast('Giocatore messo in asta! ▶', 'win');
+  if (res && res.ok) toast('Giocatore messo in asta! ▶', 'win');
+  else if (res && !res.needLogin) toast(res.error || 'Impossibile avviare il giocatore', 'err');
 };
 window.admMoveItem = async (fromIdx, toIdx) => {
-  await admApi('queueMove', { fromIndex: fromIdx, toIndex: toIdx });
+  const res = await admApi('queueMove', { fromIndex: fromIdx, toIndex: toIdx });
+  if (res && !res.ok && !res.needLogin) toast(res.error || 'Spostamento non riuscito', 'err');
 };
 window.admRemoveItem = async (idx) => {
-  await admApi('queueRemove', { index: idx });
-  toast('Giocatore rimosso dalla lista');
+  const res = await admApi('queueRemove', { index: idx });
+  if (res && res.ok) toast('Giocatore rimosso dalla lista');
+  else if (res && !res.needLogin) toast((res && res.error) || 'Rimozione non riuscita', 'err');
 };
 
 // 6. Reset e Conclusione Asta
-$('btn-adm-finish-auction').onclick = async () => {
+$('btn-adm-finish-auction').onclick = e => {
   if (!confirm('Vuoi concludere l\'asta e mostrare la classifica finale?')) return;
-  const res = await admApi('finish');
-  if (res.ok) toast('Asta conclusa! 🏆', 'win');
+  runAdminAction(e.currentTarget, () => admApi('finish'), 'Asta conclusa! 🏆');
 };
-$('btn-adm-reset-all').onclick = async () => {
+$('btn-adm-reset-all').onclick = e => {
   if (!confirm('⚠️ ATTENZIONE: Questo cancellerà tutti i dati (partecipanti, crediti, lista, storico). Sei sicuro al 100%?')) return;
-  const res = await admApi('reset');
-  if (res.ok) toast('Asta completamente azzerata 🗑️', 'win');
+  runAdminAction(e.currentTarget, () => admApi('reset'), 'Asta completamente azzerata 🗑️');
 };
 
 /* ==================== AVVIO APPLICAZIONE ==================== */
 (async function init() {
-  await restoreUserSession();
+  $('conn-retry-btn').onclick = () => {
+    setConnection('warn', '🔄 Tentativo di riconnessione…');
+    lastEventAt = Date.now();
+    connectSSE();
+    resyncAll();
+  };
+  await restoreUserSession(true);
+  await validateAdminSession();
   connectSSE();
+  startKeepAlive();
 })();
 </script>
 </body>

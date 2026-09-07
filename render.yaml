@@ -5,9 +5,14 @@ services:
     plan: free
     buildCommand: ""
     startCommand: node server.js
+    # Render invia un GET su questo percorso per verificare che il servizio sia vivo.
+    # Endpoint leggerissimo (non scrive su disco) pensato proprio per questo.
+    healthCheckPath: /api/ping
     envVars:
-      - key: PORT
-        value: 3000
+      # NOTA: la variabile PORT NON va impostata qui.
+      # Render assegna automaticamente una porta (default 10000) e la passa al
+      # processo tramite process.env.PORT: forzarla a 3000 può far fallire
+      # l'health check e restituire 502 ai visitatori.
       - key: ADMIN_PASSCODE
         value: admin
         sync: false
