@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
-   ⚽ ASTA FANTACALCIO — Server in tempo reale (zero dipendenze)
+   ⚽ FANTABOMBER — Server in tempo reale (zero dipendenze)
    Avvio:   node server.js
    Porta:   PORT=8080 node server.js (o da variabile d'ambiente Render)
    Passcode: ADMIN_PASSCODE=segreto node server.js
@@ -654,10 +654,8 @@ function handlePost(req, res, url) {
         if (state.isPaused) {
           return sendJson(res, 400, { ok: false, error: 'Asta momentaneamente in pausa dall\'astatore' });
         }
-        if (state.winner === name) {
-          return sendJson(res, 400, { ok: false, error: 'Sei già il miglior offerente! 🏆' });
-        }
-
+        // Modalità "just for fun": anche chi è già in testa può rilanciare
+        // sulla propria offerta, così può alzare il prezzo volontariamente.
         const now = Date.now();
         if (p.lastBidAt && now - p.lastBidAt < 250) {
           return sendJson(res, 400, { ok: false, error: 'Calma, attendi una frazione di secondo…' });
@@ -665,12 +663,31 @@ function handlePost(req, res, url) {
         p.lastBidAt = now;
         state.lastBidAt = now;
 
-        // Calcolo nuovo prezzo: se prima offerta parte dalla base, altrimenti incrementa
-        if (!state.winner) {
-          state.value = state.current.base;
-        } else {
-          state.value = state.value + state.setting.increment;
+        // Calcolo nuovo prezzo: di default usa il rilancio minimo, ma il
+        // partecipante può anche indicare una puntata diretta più alta
+        // (es. base 20 -> offerta immediata a 100).
+        const inc = Math.max(1, Math.round(Number(state.setting.increment) || 1));
+        const minBid = state.winner
+          ? Math.round(Number(state.value || 0)) + inc
+          : Math.round(Number(state.current.base || 0));
+        const rawDirectBid = body.amount !== undefined ? body.amount : body.value;
+        let nextValue = minBid;
+
+        if (rawDirectBid !== undefined && rawDirectBid !== null && rawDirectBid !== '') {
+          const directBid = Math.round(Number(rawDirectBid));
+          if (!Number.isFinite(directBid)) {
+            return sendJson(res, 400, { ok: false, error: 'Inserisci una puntata valida' });
+          }
+          if (directBid < minBid) {
+            return sendJson(res, 400, { ok: false, error: 'Offerta minima: € ' + minBid });
+          }
+          if (directBid > 100000) {
+            return sendJson(res, 400, { ok: false, error: 'Puntata troppo alta' });
+          }
+          nextValue = directBid;
         }
+
+        state.value = nextValue;
         state.winner = name;
 
         // Gestione Timer & Anti-Sniping (Estensione Rilanci)
@@ -1081,6 +1098,6 @@ server.headersTimeout = 66000;
 server.requestTimeout = 0;         // lo stream SSE non deve essere interrotto
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`⚽ Asta Fantacalcio avviata con successo su http://0.0.0.0:${PORT}`);
+  console.log(`⚽ FantaBomber avviato con successo su http://0.0.0.0:${PORT}`);
   console.log(`🔧 Pannello Admin: passcode "${state.setting.passcode}" · sessioni astatore salvate: ${Object.keys(state.adminTokens || {}).length}`);
 });

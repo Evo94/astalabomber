@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>⚽ Asta Fantacalcio</title>
+<title>⚽ FantaBomber</title>
 <style>
   :root {
     --bg1: #05140d;
@@ -471,6 +471,81 @@
   }
   .bid-sub-info b {
     color: var(--txt);
+  }
+
+  .direct-bid-box {
+    display: none;
+    max-width: 480px;
+    margin: 10px auto 0;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(0, 0, 0, 0.22);
+    gap: 8px;
+    align-items: stretch;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  .direct-bid-box.show {
+    display: flex;
+  }
+  .direct-bid-input-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.65);
+    color: #fde68a;
+    font-weight: 900;
+  }
+  .direct-bid-input-wrap span {
+    font-size: 18px;
+  }
+  #direct-bid-input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--txt);
+    font-size: 20px;
+    font-weight: 900;
+    padding: 12px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  #direct-bid-button {
+    border: 0;
+    border-radius: 14px;
+    padding: 0 14px;
+    min-width: 118px;
+    cursor: pointer;
+    background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+    color: #451a03;
+    font-weight: 900;
+    font-size: 13px;
+    box-shadow: 0 5px 0 #92400e;
+  }
+  #direct-bid-button:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 #92400e;
+  }
+  #direct-bid-button:disabled {
+    cursor: not-allowed;
+    filter: grayscale(1);
+    opacity: 0.65;
+  }
+  .direct-bid-hint {
+    max-width: 480px;
+    margin: 6px auto 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--txt-mut);
+    display: none;
+  }
+  .direct-bid-hint.show {
+    display: block;
   }
 
   /* ========== SEZIONI & CARDS ========== */
@@ -1103,7 +1178,7 @@
   <header>
     <div class="logo-box">
       <span class="ball">⚽</span>
-      <h1>Asta <span>Fantacalcio</span></h1>
+      <h1>Fanta<span>Bomber</span></h1>
     </div>
     <div class="header-actions">
       <div id="user-badge"><div class="dot"></div><span id="user-name-display"></span></div>
@@ -1177,11 +1252,19 @@
     <small id="bid-sub-text">inserisci prima il tuo nome</small>
   </button>
   <div id="bid-preview" class="bid-sub-info"></div>
+  <div id="direct-bid-box" class="direct-bid-box">
+    <label class="direct-bid-input-wrap" for="direct-bid-input">
+      <span>€</span>
+      <input id="direct-bid-input" type="number" min="0" step="1" inputmode="numeric" placeholder="100">
+    </label>
+    <button id="direct-bid-button" type="button">PUNTA DIRETTO</button>
+  </div>
+  <div id="direct-bid-hint" class="direct-bid-hint"></div>
 
   <!-- ==================== LOBBY (ACCESSO PARTECIPANTE) ==================== -->
   <section id="lobby-section">
     <div id="join-box" class="join-box">
-      <h2>👋 Benvenuto all'Asta!</h2>
+      <h2>👋 Benvenuto su FantaBomber!</h2>
       <p>Inserisci il tuo nome per entrare nella stanza.<br>Potrai rilanciare con un tocco dal tuo telefono!</p>
       <input id="input-join-name" type="text" maxlength="24" placeholder="Il tuo nome (es. Marco)…" autocomplete="off">
       <button id="btn-join-submit" type="button">ENTRA IN SALA D'ASTA 🚀</button>
@@ -1420,7 +1503,7 @@
   </div>
 
   <footer>
-    ⚽ Asta Fantacalcio Realtime — Sincronizzazione istantanea SSE
+    ⚽ FantaBomber Realtime — Sincronizzazione istantanea SSE
   </footer>
 </div>
 
@@ -1857,7 +1940,28 @@ function renderAll() {
   const mainTxt = $('bid-main-text');
   const subTxt = $('bid-sub-text');
   const preview = $('bid-preview');
+  const directBox = $('direct-bid-box');
+  const directInput = $('direct-bid-input');
+  const directBtn = $('direct-bid-button');
+  const directHint = $('direct-bid-hint');
   const inc = setting.increment || 1;
+  const hideDirectBid = () => {
+    directBox.classList.remove('show');
+    directHint.classList.remove('show');
+    directBtn.disabled = true;
+  };
+  const showDirectBid = (minBid) => {
+    directBox.classList.add('show');
+    directHint.classList.add('show');
+    directBtn.disabled = false;
+    directInput.min = String(minBid);
+    directInput.placeholder = String(minBid);
+    if (document.activeElement !== directInput) {
+      const typed = Number(directInput.value);
+      if (!directInput.value || !Number.isFinite(typed) || typed < minBid) directInput.value = minBid;
+    }
+    directHint.innerHTML = 'Vuoi saltare i rilanci? Inserisci una cifra almeno pari a <b>€ ' + fmt(minBid) + '</b> (es. €100).';
+  };
 
   if (!me) {
     btn.disabled = true;
@@ -1865,24 +1969,29 @@ function renderAll() {
     mainTxt.textContent = 'PUNTA!';
     subTxt.textContent = 'inserisci prima il tuo nome';
     preview.innerHTML = '';
+    hideDirectBid();
   } else if (phase !== 'auction' || !current) {
     btn.disabled = true;
     btn.classList.remove('leading');
     mainTxt.textContent = 'PUNTA!';
     subTxt.textContent = phase === 'finished' ? 'l\'asta è conclusa' : 'in attesa del prossimo giocatore';
     preview.innerHTML = '';
+    hideDirectBid();
   } else if (isPaused) {
     btn.disabled = true;
     btn.classList.remove('leading');
     mainTxt.textContent = '⏸️ ASTA IN PAUSA';
     subTxt.textContent = 'l\'astatore ha sospeso il tempo per chiarimenti';
     preview.innerHTML = '<span style="color:var(--gold);">Timer congelato. I rilanci riprenderanno non appena l\'astatore sbloccherà la pausa.</span>';
+    hideDirectBid();
   } else if (S.winner === me.name) {
-    btn.disabled = true;
+    btn.disabled = false;
     btn.classList.add('leading');
-    mainTxt.textContent = 'SEI IN TESTA! 🏆';
-    subTxt.textContent = 'Offerta attuale: € ' + fmt(S.value);
-    preview.innerHTML = '<span style="color:var(--gold);">Attendi lo scadere del timer… difendi la tua offerta!</span>';
+    const nextVal = S.value + inc;
+    mainTxt.textContent = 'RILANCIA € ' + fmt(nextVal) + ' 🚀';
+    subTxt.textContent = 'sei già in testa · rilancio +€' + fmt(inc);
+    preview.innerHTML = '<span style="color:var(--gold);">Just for fun: puoi alzare anche la tua offerta!</span>';
+    showDirectBid(nextVal);
   } else {
     btn.disabled = false;
     btn.classList.remove('leading');
@@ -1890,6 +1999,7 @@ function renderAll() {
     mainTxt.textContent = 'PUNTA € ' + fmt(nextVal);
     subTxt.textContent = 'base €' + fmt(current.base) + ' · rilancio +€' + fmt(inc);
     preview.innerHTML = 'La tua offerta salirà a <b>€ ' + fmt(nextVal) + '</b>';
+    showDirectBid(nextVal);
   }
 
   /* --- Visualizzazione Badge Utente & Lobby --- */
@@ -2161,8 +2271,14 @@ $('input-join-name').addEventListener('keydown', e => {
   if (e.key === 'Enter') $('btn-join-submit').click();
 });
 
+function getMinimumBid() {
+  if (!S || S.phase !== 'auction' || !S.current) return 0;
+  const inc = (S.setting && S.setting.increment) || 1;
+  return S.winner ? Number(S.value || 0) + Number(inc || 1) : Number(S.current.base || 0);
+}
+
 let lastBidClick = 0;
-$('bid-button').onclick = async () => {
+async function sendBid(amount) {
   if (!me) {
     openModalName();
     return;
@@ -2170,14 +2286,36 @@ $('bid-button').onclick = async () => {
   if (Date.now() - lastBidClick < 250) return;
   lastBidClick = Date.now();
 
-  const res = await api('/api/bid', { token: me.token });
+  const payload = { token: me.token };
+  if (amount !== undefined) payload.amount = amount;
+  const res = await api('/api/bid', payload);
   if (res.ok) {
     toast('€ ' + fmt(res.value) + ' — Sei in testa! 🔥', 'win');
     animateBidButton();
   } else {
     toast(res.error || 'Offerta non valida', 'err');
   }
+}
+
+$('bid-button').onclick = () => sendBid();
+
+$('direct-bid-button').onclick = () => {
+  const amount = Math.round(Number($('direct-bid-input').value));
+  const minBid = getMinimumBid();
+  if (!Number.isFinite(amount)) {
+    toast('Inserisci una cifra valida', 'err');
+    return;
+  }
+  if (amount < minBid) {
+    toast('Offerta minima: € ' + fmt(minBid), 'err');
+    return;
+  }
+  sendBid(amount);
 };
+
+$('direct-bid-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('direct-bid-button').click();
+});
 
 function animateBidButton() {
   const b = $('bid-button');
