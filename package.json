@@ -1,7 +1,7 @@
 {
   "name": "astalabomber",
   "version": "1.0.0",
-  "description": "⚽ Asta Fantacalcio in tempo reale con modalità Admin e timer dinamico",
+  "description": "⚽ FantaBomber in tempo reale con modalità Admin e timer dinamico",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

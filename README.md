@@ -1,4 +1,4 @@
-# ⚽ Asta Fantacalcio — Piattaforma Aste in Tempo Reale
+# ⚽ FantaBomber — Piattaforma Aste in Tempo Reale
 
 Applicazione web in tempo reale per gestire le aste del Fantacalcio con i tuoi amici: ognuno si connette dal proprio smartphone o computer, inserisce il proprio nome e rilancia con un solo tocco sul grande pulsante.
 
@@ -15,7 +15,7 @@ Render permette di pubblicare il sito online con un indirizzo web pubblico prote
 2. Carica i file del progetto sul repository:
    ```bash
    git add .
-   git commit -m "Asta Fantacalcio pronta per il deploy"
+   git commit -m "FantaBomber pronto per il deploy"
    git push origin main
    ```
 
