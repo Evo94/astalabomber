@@ -680,6 +680,28 @@
     padding: 2px 6px;
     border-radius: 999px;
   }
+  .p-chip-kick {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    background: rgba(239, 68, 68, 0.18);
+    color: #fecaca;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin-left: 2px;
+  }
+  .p-chip-kick:hover {
+    background: var(--red);
+    color: #fff;
+    border-color: var(--red);
+  }
 
   /* ========== LISTA ASTA (QUEUE) ========== */
   .queue-list {
@@ -834,6 +856,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+  }
+  .admin-subcard h3 .pill {
+    background: var(--green);
+    color: #052e16;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: 0;
+    text-transform: none;
   }
 
   .grid-2 {
@@ -1487,7 +1518,18 @@
         <div id="adm-interactive-queue" class="adm-queue-table"></div>
       </div>
 
-      <!-- 5. AZIONI FINALI & RESET -->
+      <!-- 5. PARTECIPANTI IN SALA (rimozione) -->
+      <div class="admin-subcard">
+        <h3>👥 Partecipanti in Sala <span id="adm-part-count" class="pill">0</span></h3>
+        <p style="color:var(--txt-mut); font-size:12px; margin-bottom:8px; line-height:1.4;">
+          Rimuovi chi è entrato per errore o non deve più rilanciare. La sessione viene invalidata subito.
+          Se era in testa sull'asta in corso, la sua offerta viene annullata e si riparte dalla base.
+          Potrà rientrare inserendo di nuovo il nome.
+        </p>
+        <div id="adm-participants-list" class="adm-queue-table"></div>
+      </div>
+
+      <!-- 6. AZIONI FINALI & RESET -->
       <div class="admin-subcard">
         <h3>🚨 Azioni Globali & Sessione</h3>
         <div class="admin-btn-row">
@@ -1608,24 +1650,7 @@ const NET = {
 };
 
 function setConnection(state, text) {
-  const banner = $('conn-banner');
-  const label = $('conn-banner-text');
-  if (!banner) return;
-  clearTimeout(NET.bannerTimer);
-  if (state === 'ok') {
-    if (!NET.online) {           // mostra un breve "riconnesso" solo se era caduto
-      banner.className = 'show ok';
-      label.textContent = text || '✅ Connessione ripristinata';
-      NET.bannerTimer = setTimeout(() => { banner.className = ''; }, 2200);
-    } else {
-      banner.className = '';
-    }
-    NET.online = true;
-    NET.attempts = 0;
-    return;
-  }
-  NET.online = false;
-  banner.className = 'show' + (state === 'warn' ? ' warn' : '');
+  const banner = $('conn-baassName = 'show' + (state === 'warn' ? ' warn' : '');
   label.textContent = text || 'Connessione al server persa';
 }
 
@@ -1806,6 +1831,14 @@ function startKeepAlive() {
   window.addEventListener('online', () => resyncAll());
 }
 
+function clearLocalUser(msg) {
+  me = null;
+  seenMyselfInRoom = false;
+  LS.token = '';
+  LS.name = '';
+  if (msg) toast(msg, 'err');
+}
+
 async function restoreUserSession(silent) {
   const token = LS.token;
   const savedName = LS.name;
@@ -1817,6 +1850,9 @@ async function restoreUserSession(silent) {
     me = { name: res.name, token: res.token };
     LS.token = res.token;
     LS.name = res.name;
+  } else if (res && res.kicked) {
+    clearLocalUser(res.error || 'Sei stato rimosso dall\'asta dall\'astatore');
+    if (S) renderAll();
   } else {
     LS.token = '';
     if (!silent && res && res.error && !res.networkError) toast(res.error, 'err');
@@ -1842,6 +1878,18 @@ function applyState(newState) {
 
   if (prevPrice !== S.value && S.value > 0) {
     playBeep(880, 0.12, 'triangle');
+  }
+
+  // Se l'astatore ci ha rimossi, torniamo alla schermata di ingresso.
+  // seenMyselfInRoom evita di scambiare il breve attimo del join per un kick.
+  if (me) {
+    const parts = S.participants || [];
+    const stillThere = parts.some(p => String(p.name).toLowerCase() === String(me.name).toLowerCase());
+    if (seenMyselfInRoom && !stillThere) {
+      clearLocalUser('🚫 L\'astatore ti ha rimosso dalla sala d\'asta');
+    } else if (stillThere) {
+      seenMyselfInRoom = true;
+    }
   }
 
   renderAll();
@@ -2032,10 +2080,15 @@ function renderAll() {
   $('participants-container').innerHTML = parts.length ? parts.map(p => {
     const isLeader = S.winner === p.name;
     const count = Object.keys(p.roster || {}).length;
+    const nameJs = JSON.stringify(p.name);
+    const kickBtn = isAdmin
+      ? `<button type="button" class="p-chip-kick" title="Rimuovi ${esc(p.name)} dalla sala" onclick='event.stopPropagation(); admRemoveParticipant(${nameJs})'>✕</button>`
+      : '';
     return `
       <div class="p-chip ${isLeader ? 'leader' : ''}" onclick="showRosterModal('${esc(p.name)}')">
         <span>${esc(p.name)}</span>
         <span class="spent-pill">€ ${fmt(p.spent)} · ${count}</span>
+        ${kickBtn}
       </div>
     `;
   }).join('') : '<span style="color:var(--txt-mut); font-style:italic; font-size:13px;">Nessun partecipante connesso…</span>';
@@ -2572,6 +2625,15 @@ window.admRemoveItem = async (idx) => {
   else if (res && !res.needLogin) toast((res && res.error) || 'Rimozione non riuscita', 'err');
 };
 
+window.admRemoveParticipant = async (name) => {
+  const who = String(name || '').trim();
+  if (!who) return;
+  if (!confirm('Rimuovere ' + who + ' dalla sala d\'asta?\n\nNon potrà più rilanciare. Se era in testa, la sua offerta viene annullata. Potrà rientrare inserendo di nuovo il nome.')) return;
+  const res = await admApi('removeParticipant', { name: who });
+  if (res && res.ok) toast((res.removed || who) + ' rimosso dalla sala 🚫', 'win');
+  else if (res && !res.needLogin) toast((res && res.error) || 'Rimozione non riuscita', 'err');
+};
+
 // 6. Reset e Conclusione Asta
 $('btn-adm-finish-auction').onclick = e => {
   if (!confirm('Vuoi concludere l\'asta e mostrare la classifica finale?')) return;
@@ -2579,6 +2641,58 @@ $('btn-adm-finish-auction').onclick = e => {
 };
 $('btn-adm-reset-all').onclick = e => {
   if (!confirm('⚠️ ATTENZIONE: Questo cancellerà tutti i dati (partecipanti, crediti, lista, storico). Sei sicuro al 100%?')) return;
+  runAdminAction(e.currentTarget, () => admApi('reset'), 'Asta completamente azzerata 🗑️');
+};
+
+/* ==================== AVVIO APPLICAZIONE ==================== */
+(async function init() {
+  $('conn-retry-btn').onclick = () => {
+    setConnection('warn', '🔄 Tentativo di riconnessione…');
+    lastEventAt = Date.now();
+    connectSSE();
+    resyncAll();
+  };
+  await restoreUserSession(true);
+  await validateAdminSession();
+  connectSSE();
+  startKeepAlive();
+})();
+</script>
+</body>
+</html>
+i sicuro al 100%?')) return;
+  runAdminAction(e.currentTarget, () => admApi('reset'), 'Asta completamente azzerata 🗑️');
+};
+
+/* ==================== AVVIO APPLICAZIONE ==================== */
+(async function init() {
+  $('conn-retry-btn').onclick = () => {
+    setConnection('warn', '🔄 Tentativo di riconnessione…');
+    lastEventAt = Date.now();
+    connectSSE();
+    resyncAll();
+  };
+  await restoreUserSession(true);
+  await validateAdminSession();
+  connectSSE();
+  startKeepAlive();
+})();
+</script>
+</body>
+</html>
+stEventAt = Date.now();
+    connectSSE();
+    resyncAll();
+  };
+  await restoreUserSession(true);
+  await validateAdminSession();
+  connectSSE();
+  startKeepAlive();
+})();
+</script>
+</body>
+</html>
+i sicuro al 100%?')) return;
   runAdminAction(e.currentTarget, () => admApi('reset'), 'Asta completamente azzerata 🗑️');
 };
 
