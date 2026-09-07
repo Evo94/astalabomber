@@ -53,13 +53,19 @@ Nella sezione **Environment Variables**:
 
 L'accesso al pannello di controllo è protetto da passcode ed è accessibile cliccando su **"🔧 Astatore"** in alto a destra (passcode default: **`admin`**).
 
-### 🎯 1. Modifica del Giocatore in Asta in Tempo Reale
-L'amministratore può in qualsiasi momento:
+### ⚡ 1. Aggiungi Giocatore in Asta
+È la prima scheda del pannello: inserisci al volo `Nome` e `Base (€)` e scegli se
+- 🚀 **Avvia Asta Subito** — apre immediatamente l'asta per quel calciatore, senza dover preparare una lista;
+- ➕ **Aggiungi in fondo alla Lista** — lo accoda all'asta per gestirlo dopo.
+
+### 🎯 2. Modifica del Giocatore in Asta in Tempo Reale
+Subito sotto, la scheda con il giocatore attualmente all'incanto. L'amministratore può in qualsiasi momento:
 - **Modificare il nome del giocatore corrente** direttamente dal form senza interrompere l'asta.
 - **Cambiare il prezzo base** o correggere il valore attuale offerto.
 - **Cambiare l'offerente in testa** se necessario.
+- **Aggiudicare / svendere / chiudere subito** l'asta e avviare il **prossimo giocatore dalla lista**.
 
-### ⏱️ 2. Gestione Avanzata dei Tempi & Anti-Sniping (Estensione Rilanci)
+### ⏱️ 3. Gestione Avanzata dei Tempi & Anti-Sniping (Estensione Rilanci)
 Puoi personalizzare ogni singolo parametro del timer:
 - **Durata Timer Asta (es. 30s)**: il countdown iniziale assegnato a ciascun giocatore (imposta `0` per gestire i tempi solo manualmente).
 - **Soglia di Estensione (es. 10s)**: i rilanci **NON allungano il timer se mancano molti secondi** (es. se mancano 35s, un rilancio lascia il tempo inalterato a 35s). L'allungamento scatta **solo da questo valore in giù** (es. dai 10 secondi in giù).
@@ -68,13 +74,10 @@ Puoi personalizzare ogni singolo parametro del timer:
   - *Riporta a X secondi* (consigliato): se mancano 3s e la soglia è 10s, il timer ritorna a 10s.
   - *Aggiungi +X secondi*: somma i secondi al tempo rimanente.
 - **Avvio Countdown**: decidi se il timer deve partire subito all'apertura del giocatore o solo alla prima offerta.
-- **Controlli Real-Time Live**:
+- **Controlli Real-Time Live** (nella scheda del giocatore in asta):
   - ⏸️ **Pausa / Riprendi**
   - 🔄 **Riavvia Timer**
   - ➕ **+5s / +10s / -5s**
-
-### ⚡ 3. Lancia Giocatore Rapido
-Permette di inserire al volo `Nome` e `Base (€)` e avviare immediatamente l'asta per quel calciatore, senza dover preparare o caricare in anticipo una lista.
 
 ### 📋 4. Gestione Lista & Coda Giocatori
 - Incolla una lista massiva (supporta `Nome, Base` oppure `Nome Base` oppure `Nome`).
