@@ -60,6 +60,7 @@ function freshState() {
       passcode: process.env.ADMIN_PASSCODE || 'admin', // password pannello astatore
     },
     history: [],               // [{ id, player, winner, value, at }]
+    kickedTokens: {},          // token invalidati dall'astatore -> timestamp (impedisce il rientro automatico)
   };
 }
 
@@ -141,6 +142,13 @@ function normalizeState(saved) {
     s.setting.passcode = process.env.ADMIN_PASSCODE || 'admin';
   }
   if (process.env.ADMIN_PASSCODE) s.setting.passcode = process.env.ADMIN_PASSCODE;
+
+  s.kickedTokens = {};
+  if (isPlainObject(saved.kickedTokens)) {
+    for (const [token, at] of Object.entries(saved.kickedTokens)) {
+      if (typeof token === 'string' && token.length >= 8) s.kickedTokens[token] = Number(at) || Date.now();
+    }
+  }
   return s;
 }
 
@@ -272,6 +280,41 @@ function validName(name) {
 
 function getParticipant(name) {
   return state.participants[String(name || '').toLowerCase()];
+}
+
+function markTokenKicked(token) {
+  if (!token || typeof token !== 'string') return;
+  if (!state.kickedTokens || typeof state.kickedTokens !== 'object') state.kickedTokens = {};
+  state.kickedTokens[token] = Date.now();
+  delete state.tokens[token];
+}
+
+function isKickedToken(token) {
+  return !!token && Object.prototype.hasOwnProperty.call(state.kickedTokens || {}, token);
+}
+
+/* Rimuove un partecipante dalla sala: invalida la sessione, e se era in testa
+   sull'asta in corso ne annulla l'offerta (si riparte dalla base). */
+function removeParticipantFromRoom(rawName) {
+  const name = cleanName(rawName);
+  if (!name) return { ok: false, error: 'Indica il partecipante da rimuovere' };
+  const key = name.toLowerCase();
+  const p = state.participants[key];
+  if (!p) return { ok: false, error: 'Partecipante non trovato in sala' };
+
+  const displayName = p.name;
+  if (p.token) markTokenKicked(p.token);
+  for (const [t, n] of Object.entries(state.tokens || {})) {
+    if (String(n).toLowerCase() === key) markTokenKicked(t);
+  }
+  delete state.participants[key];
+
+  if (state.winner && String(state.winner).toLowerCase() === key) {
+    state.winner = null;
+    if (state.current) state.value = Number(state.current.base) || 0;
+    state.lastBidAt = 0;
+  }
+  return { ok: true, removed: displayName };
 }
 
 function publicState() {
@@ -620,6 +663,15 @@ function handlePost(req, res, url) {
         if (token && state.tokens[token]) {
           const existing = state.tokens[token];
           return sendJson(res, 200, { ok: true, name: existing, token });
+        }
+        // Token invalidato dall'astatore: NON ricreare in automatico il partecipante
+        // (altrimenti un refresh della pagina lo farebbe rientrare da solo).
+        if (token && isKickedToken(token)) {
+          return sendJson(res, 403, {
+            ok: false,
+            kicked: true,
+            error: 'Sei stato rimosso dall\'asta dall\'astatore'
+          });
         }
         const name = cleanName(body.name);
         if (!name) return sendJson(res, 400, { ok: false, error: 'Inserisci il tuo nome' });
@@ -979,7 +1031,16 @@ function handlePost(req, res, url) {
           return sendJson(res, 400, { ok: false, error: 'Elemento storico non trovato' });
         }
 
-        /* --- 13. Concludi asta --- */
+        /* --- 13. Rimuovi un partecipante dalla sala --- */
+        if (action === 'removeParticipant') {
+          const result = removeParticipantFromRoom(payload.name);
+          if (!result.ok) return sendJson(res, 400, result);
+          broadcast();
+          saveStateCritical();
+          return sendJson(res, 200, result);
+        }
+
+        /* --- 14. Concludi asta --- */
         if (action === 'finish') {
           if (state.current) award();
           clearBoth();
@@ -993,7 +1054,7 @@ function handlePost(req, res, url) {
           return sendJson(res, 200, { ok: true });
         }
 
-        /* --- 14. Reset totale --- */
+        /* --- 15. Reset totale --- */
         if (action === 'reset') {
           const keepSettings = state.setting;
           const keepAdminToken = String(body.adminToken || '');

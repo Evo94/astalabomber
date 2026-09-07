@@ -90,6 +90,14 @@ Puoi personalizzare ogni singolo parametro del timer:
 - Elenco completo di tutti i giocatori aggiudicati con prezzo e vincitore.
 - Se viene commesso un errore, l'amministratore può annullare la vendita: il calciatore viene rimosso dalla rosa del vincitore e i crediti spesi vengono automaticamente riaccreditati!
 
+### 🚫 6. Rimozione Partecipanti dalla Sala
+L'astatore può cacciare un partecipante in qualsiasi momento, dal pannello di controllo (**👥 Partecipanti in Sala**) oppure toccando la **✕** sul chip nella lista in sala.
+- La sessione del rimosso viene invalidata subito: non può più rilanciare.
+- Se era il migliore offerente del giocatore in corso, la sua puntata viene annullata e l'asta riparte dalla base.
+- Il rimosso vede un avviso e torna alla schermata di ingresso; un refresh **non** lo fa rientrare da solo.
+- Può rientrare in sala inserendo di nuovo il nome (stesso o diverso).
+- Le assegnazioni già registrate nello storico restano invariate.
+
 ---
 
 ## 👤 Modalità Partecipante
